@@ -15,22 +15,24 @@ import org.dasein.cloud.Requirement;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.dc.Region;
 import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.GoogleMethod;
-import org.dasein.cloud.google.GoogleOperationType;
 import org.dasein.cloud.google.capabilities.GCEVPNCapabilities;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.GoogleMethod;
 import org.dasein.cloud.identity.ServiceAction;
 import org.dasein.cloud.network.AbstractVPNSupport;
+import org.dasein.cloud.network.IPVersion;
 import org.dasein.cloud.network.VPN;
 import org.dasein.cloud.network.VPNCapabilities;
 import org.dasein.cloud.network.VPNConnection;
+import org.dasein.cloud.network.VPNConnectionState;
 import org.dasein.cloud.network.VPNGateway;
 import org.dasein.cloud.network.VPNGatewayState;
+import org.dasein.cloud.network.VPNLaunchOptions;
 import org.dasein.cloud.network.VPNProtocol;
 import org.dasein.cloud.network.VPNState;
 import org.dasein.cloud.util.APITrace;
 
 import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.Address;
 import com.google.api.services.compute.model.ForwardingRule;
 import com.google.api.services.compute.model.ForwardingRuleList;
 import com.google.api.services.compute.model.Network;
@@ -65,60 +67,47 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     @Override
     public void connectToGateway(String providerVpnId, String toGatewayId) throws CloudException, InternalException {
-        APITrace.begin(provider, "connectVPNToGateway");
-        try {
-            // TODO Auto-generated method stub
-        } finally {
-            APITrace.end();
-        }
+        throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN");
     }
-
 
     @Override
     public VPN createVPN(String inProviderDataCenterId, String name, String description, VPNProtocol protocol) throws CloudException, InternalException {
-        APITrace.begin(provider, "createVPN");
-        try {
-            // TODO Auto-generated method stub
-        } finally {
-            APITrace.end();
-        }
-        return null;
+        throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN(String inProviderDataCenterId, String name, String description, String providerVlanId, VPNProtocol protocol)");
     }
 
-
     @Override
-    public VPN createVPN(String inProviderDataCenterId, String name, String description, String providerVlanId, VPNProtocol protocol) throws CloudException, InternalException {
+    public VPN createVPN(VPNLaunchOptions vpnLaunchOptions) throws CloudException, InternalException {
         APITrace.begin(provider, "createVPN");
         VPN vpn = new VPN();
         try {
-            vpn.setName(name);
-            vpn.setDescription(description);
+            vpn.setName(vpnLaunchOptions.getName());
+            vpn.setDescription(vpnLaunchOptions.getDescription());
             Compute gce = getProvider().getGoogleCompute();
             try {
                 GoogleMethod method = new GoogleMethod(getProvider());
 
                 TargetVpnGateway vpnGatewayContent = new TargetVpnGateway();
-                vpnGatewayContent.setName(name);
-                vpnGatewayContent.setDescription(description);
-                Network net = gce.networks().get(getContext().getAccountNumber(), providerVlanId).execute();
+                vpnGatewayContent.setName(vpnLaunchOptions.getName());
+                vpnGatewayContent.setDescription(vpnLaunchOptions.getDescription());
+                Network net = gce.networks().get(getContext().getAccountNumber(), vpnLaunchOptions.getProviderVlanId()).execute();
                 vpnGatewayContent.setNetwork(net.getSelfLink());
 
-                Operation op = gce.targetVpnGateways().insert(getContext().getAccountNumber(), inProviderDataCenterId, vpnGatewayContent).execute();
-                method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, inProviderDataCenterId, null);
+                Operation op = gce.targetVpnGateways().insert(getContext().getAccountNumber(), getContext().getRegionId(), vpnGatewayContent).execute();
+                method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
 
-                vpn.setName(name);
-                vpn.setDescription(description);
-                vpn.setProtocol(protocol);
-                vpn.setProviderVpnId(providerVlanId);
-                vpn.setProviderVpnIP(getNewIpAddress(name, inProviderDataCenterId));
+                vpn.setName(vpnLaunchOptions.getName());
+                vpn.setDescription(vpnLaunchOptions.getDescription());
+                vpn.setProtocol(vpnLaunchOptions.getProtocol());
+                vpn.setProviderVpnId(vpnLaunchOptions.getProviderVlanId());
+                String ipAddress = getProvider().getNetworkServices().getIpAddressSupport().request(IPVersion.IPV4);
+                vpn.setProviderVpnIP(getProvider().getNetworkServices().getIpAddressSupport().getIpAddress(ipAddress).getRawAddress().getIpAddress());
 
-                createForwardingRule(name, "-rule-esp", vpn.getProviderVpnIP(), "ESP", inProviderDataCenterId, null);
-                createForwardingRule(name, "-rule-udp500", vpn.getProviderVpnIP(), "UDP", inProviderDataCenterId, "500");
-                createForwardingRule(name, "-rule-udp4500", vpn.getProviderVpnIP(), "UDP", inProviderDataCenterId, "4500");
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-esp", vpn.getProviderVpnIP(), "ESP", null);
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp500", vpn.getProviderVpnIP(), "UDP", "500");
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp4500", vpn.getProviderVpnIP(), "UDP", "4500");
 
-            } catch ( Exception e ) { //IOException
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            } catch ( Exception e ) { 
+                throw new CloudException(e);
             }
         } finally {
             APITrace.end();
@@ -144,11 +133,8 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                     op = gce.forwardingRules().delete(getContext().getAccountNumber(), vpn.getProviderRegionId(), forwardingRule.replaceAll(".*/", "")).execute();
                     method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, vpn.getProviderRegionId(), null);
 
-                    try {
-                        String ipAddressName = getProvider().getNetworkServices().getIpAddressSupport().getIpAddressIdFromIP(ipAddress, vpn.getProviderRegionId());
-                        op = gce.addresses().delete(getContext().getAccountNumber(), vpn.getProviderRegionId(), ipAddressName).execute();
-                        method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, vpn.getProviderRegionId(), null);
-                    } catch (Exception e ) {}// NOP - address does not exist
+                    String ipAddressName = getProvider().getNetworkServices().getIpAddressSupport().getIpAddressIdFromIP(ipAddress, vpn.getProviderRegionId());
+                    getProvider().getNetworkServices().getIpAddressSupport().releaseFromPool(ipAddressName);
                 }
                 op = gce.targetVpnGateways().delete(getContext().getAccountNumber(), vpn.getProviderRegionId(), providerVpnId).execute();
                 method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, vpn.getProviderRegionId(), null);
@@ -163,33 +149,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         }
     }
 
-    private @Nonnull String getNewIpAddress(@Nonnull String name, @Nonnull String inProviderDataCenterId) throws CloudException, InternalException {
-        GoogleMethod method = new GoogleMethod(getProvider());
-        Compute gce = getProvider().getGoogleCompute();
-
-        Address ipContent = new Address();
-        ipContent.setDescription(name);
-        ipContent.setName(name);
-        ipContent.setRegion(inProviderDataCenterId);
-        Operation op;
-        try {
-            op = gce.addresses().insert(getContext().getAccountNumber(), inProviderDataCenterId, ipContent).execute();
-        } catch (Exception e ) {
-            throw new CloudException(e);
-        }
-        method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, inProviderDataCenterId, null);
-
-        Address ipAddress = null;;
-        try {
-            ipAddress = gce.addresses().get(getContext().getAccountNumber(), inProviderDataCenterId, name).execute();
-        } catch ( IOException e ) {
-            throw new CloudException(e);
-        }
-        return ipAddress.getAddress();
-
-    }
-
-    private void createForwardingRule(@Nonnull String targetVpnGatewayId, @Nonnull String ruleName, @Nonnull String ipAddress, @Nonnull String protocol, @Nonnull String inProviderDataCenterId, @Nullable String portRange) throws CloudException, InternalException {
+    private void createForwardingRule(@Nonnull String targetVpnGatewayId, @Nonnull String ruleName, @Nonnull String ipAddress, @Nonnull String protocol, @Nullable String portRange) throws CloudException, InternalException {
         GoogleMethod method = new GoogleMethod(getProvider());
         Compute gce = getProvider().getGoogleCompute();
 
@@ -201,20 +161,20 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         if (protocol.equalsIgnoreCase("UDP")) {
             frContent.setPortRange(portRange);
         }
-        frContent.setTarget(gce.getBaseUrl() + getContext().getAccountNumber() + "/regions/" + inProviderDataCenterId +"/targetVpnGateways/" + targetVpnGatewayId);
+        frContent.setTarget(gce.getBaseUrl() + getContext().getAccountNumber() + "/regions/" + getContext().getRegionId() +"/targetVpnGateways/" + targetVpnGatewayId);
         Operation op;
         try {
-            op = gce.forwardingRules().insert(getContext().getAccountNumber(), inProviderDataCenterId, frContent ).execute();
+            op = gce.forwardingRules().insert(getContext().getAccountNumber(), getContext().getRegionId(), frContent ).execute();
         } catch (Exception e ) {
             throw new CloudException(e);
         }
-        method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, inProviderDataCenterId, null);
+        method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
 
     }
 
     @Override
     public VPNGateway connectToVPNGateway(String vpnName, String endpoint, String name, String description, VPNProtocol protocol, String sharedSecret, String cidr) throws CloudException, InternalException {
-        APITrace.begin(provider, "createVPNGateway");
+        APITrace.begin(provider, "connectToVPNGateway");
         try {
             GoogleMethod method = new GoogleMethod(getProvider());
             Compute gce = getProvider().getGoogleCompute();
@@ -269,6 +229,8 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     }
 
+    
+    // this should return not supported exception. 
     @Override
     public void disconnectFromGateway(String providerVpnId, String fromGatewayId) throws CloudException, InternalException {
         APITrace.begin(provider, "disconnectVPNFromGateway");
@@ -292,16 +254,9 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                     }
                 }
             }
-            // TODO obtain the actual name from ip
-            String ipName = providerVpnId;
 
-            try {
-                op = gce.addresses().delete(getContext().getAccountNumber(), vpn.getProviderRegionId(), ipName).execute();
-                method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, vpn.getProviderRegionId(), null);
-            } catch ( Exception e ) {
-                //throw new CloudException(e);
-                System.out.println(e);
-            }
+            String ipName = getProvider().getNetworkServices().getIpAddressSupport().getIpAddressIdFromIP(ipAddress, vpn.getProviderRegionId());
+            getProvider().getNetworkServices().getIpAddressSupport().releaseFromPool(ipName);
 
             RouteList routes = gce.routes().list(getContext().getAccountNumber()).execute();
             if ((null != routes) && (null != routes.getItems())) {
@@ -322,6 +277,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     @Override
     public void deleteVPNGateway(String providerVPNGatewayId) throws CloudException, InternalException {
+        // TODO it may be nice to switch to this one and make disconnectFromGateway not implemented
         APITrace.begin(provider, "deleteVPNGateway");
         try {
             Compute gce = getProvider().getGoogleCompute();
@@ -335,14 +291,10 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
             } catch ( IOException e ) {
                 throw new CloudException(e);
             }
-
-            System.out.println("INSPECT");
-            // TODO Auto-generated method stub
         } finally {
             APITrace.end();
         }
     }
-
 
     private VPNGateway toVPNGateway(VpnTunnel vpnTunnel) {
         //vpnTunnel.getId()
@@ -376,26 +328,15 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
         return vpnGateway;
     }
-    
+
     @Override
     public VPNGateway createVPNGateway(String endpoint, String name, String description, VPNProtocol protocol, String bgpAsn) throws CloudException, InternalException {
-        APITrace.begin(provider, "createVPNGateway");
-        try {
-            // TODO Auto-generated method stub
-        } finally {
-            APITrace.end();
-        }
-        return null;
+        throw new OperationNotSupportedException("GCE VPNS do not support bgpAsn");
     }
 
     @Override
     public void detachFromVLAN(String providerVpnId, String providerVlanId) throws CloudException, InternalException {
-        APITrace.begin(provider, "detachVPNFromVLAN");
-        try {
-            // TODO Auto-generated method stub
-        } finally {
-            APITrace.end();
-        }
+        throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are detatched by deleteVPN");
     }
 
     @Override
@@ -408,7 +349,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     @Override
     public VPNGateway getGateway(String gatewayId) throws CloudException, InternalException {
-        APITrace.begin(provider, "getGateway");
+        APITrace.begin(provider, "getGateway");  // this wants the name of the vlan returned?
         try {
             // TODO Auto-generated method stub
         } finally {
@@ -436,13 +377,12 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                     }
                 }
             }
+            return null;
         } catch ( IOException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new CloudException(e);
         } finally {
             APITrace.end();
         }
-        return null;
     }
 
     public VPN toVPN(TargetVpnGateway targetVpnGateway) {
@@ -453,11 +393,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         vpn.setProviderRegionId(targetVpnGateway.getRegion().replaceAll(".*/", ""));
 
         return vpn;
-    }
-
-    @Override
-    public Requirement getVPNDataCenterConstraint() throws CloudException, InternalException {
-        return getCapabilities().getVPNDataCenterConstraint();
     }
 
     @Override
@@ -495,24 +430,56 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     @Override
     public Iterable<VPNGateway> listGatewaysWithBgpAsn(String bgpAsn) throws CloudException, InternalException {
-        APITrace.begin(provider, "listGatewaysWithBgpAsn");
-        try {
-            // TODO Auto-generated method stub
-        } finally {
-            APITrace.end();
-        }
-        return null;
+        throw new OperationNotSupportedException("GCE VPNS do not support bgpAsn");
     }
 
     @Override
     public Iterable<VPNConnection> listVPNConnections(String toVpnId) throws CloudException, InternalException {
         APITrace.begin(provider, "listVPNConnections");
+        VPN vpn = getVPN(toVpnId);
+        List<VPNConnection> vpnConnections = new ArrayList<VPNConnection>();
         try {
-            // TODO Auto-generated method stub
+            Compute gce = getProvider().getGoogleCompute();
+
+            Collection<Region> regions = getProvider().getDataCenterServices().listRegions();
+            for (Region region : regions) {
+                VpnTunnelList tunnels;
+                try {
+                    tunnels = gce.vpnTunnels().list(getContext().getAccountNumber(), region.getName()).execute();
+                } catch ( IOException e ) {
+                    throw new CloudException(e);
+                }
+
+                if ((null != tunnels) && (null != tunnels.getItems())) {
+                    for (VpnTunnel vpnTunnel : tunnels.getItems()) {
+                        if (toVpnId.equals(vpnTunnel.getTargetVpnGateway().replaceAll(".*/", ""))) {
+                            System.out.println("INSPECT");
+                            VPNConnection vpnConnection = new VPNConnection();
+
+                            if (vpnTunnel.getIkeVersion() == 1) {
+                                vpnConnection.setProtocol(VPNProtocol.IKE_V1);
+                            } else if (vpnTunnel.getIkeVersion() == 2) {
+                                vpnConnection.setProtocol(VPNProtocol.IKE_V2);
+                            }
+
+                            if (vpnTunnel.getStatus().equals("ESTABLISHED")) {
+                                vpnConnection.setCurrentState(VPNConnectionState.AVAILABLE);
+                            } else {
+                                vpnConnection.setCurrentState(VPNConnectionState.PENDING);
+                            }
+
+                            vpnConnection.setProviderGatewayId(vpnTunnel.getPeerIp());
+                            vpnConnection.setProviderVpnConnectionId(vpnTunnel.getName());
+                            vpnConnection.setProviderVpnId(vpn.getName());
+                            vpnConnections.add(vpnConnection);
+                        }
+                    }
+                }
+            }
         } finally {
             APITrace.end();
         }
-        return null;
+        return vpnConnections;
     }
 
     @Override
@@ -528,8 +495,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                 try {
                     tunnels = gce.vpnTunnels().list(getContext().getAccountNumber(), region.getName()).execute();
                 } catch ( IOException e ) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    throw new CloudException(e);
                 }
                 if ((null != tunnels) && (null != tunnels.getItems())) {
                     for (VpnTunnel tunnel : tunnels.getItems()) {
@@ -540,7 +506,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                             ResourceStatus status = new ResourceStatus(tunnel.getName(), VPNState.PENDING);
                             statusList.add(status);
                         }
-
                     }
                 }
             }
@@ -618,4 +583,10 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         }
         return false;
     }
+
+    @Override
+    public Requirement getVPNDataCenterConstraint() throws CloudException, InternalException {
+        return Requirement.NONE;
+    }
+
 }
