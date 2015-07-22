@@ -27,9 +27,9 @@
     </organization>
 
     <scm>
-        <connection>scm:git:git://github.com/greese/dasein-cloud-google.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/greese/dasein-cloud-google.git</developerConnection>
-        <url>http://github.com/greese/dasein-cloud-google</url>
+        <connection>scm:git:git://github.com/dasein-cloud/dasein-cloud-google.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/dasein-cloud/dasein-cloud-google.git</developerConnection>
+        <url>http://github.com/dasein-cloud/dasein-cloud-google</url>
     </scm>
 
     <parent>
@@ -317,16 +317,26 @@
 
     <developers>
         <developer>
-            <name>George Reese</name>
-            <id>greese</id>
-            <email>george_reese -at- dell -dot- com</email>
+            <name>Drew Lyall</name>
+            <id>drewlyall</id>
+            <email>andy_lyall -at- dell -dot- com</email>
             <organization>Dell</organization>
             <roles>
                 <role>Java Developer</role>
-                <role>PMC</role>
             </roles>
             <url>http://software.dell.com</url>
-            <timezone>-6</timezone>
+            <timezone>0</timezone>
+        </developer>
+        <developer>
+            <name>Roger Unwin</name>
+            <id>rogerunwin</id>
+            <email>roger_unwin -at- dell -dot- com</email>
+            <organization>Dell</organization>
+            <roles>
+                <role>Java Developer</role>
+            </roles>
+            <url>http://software.dell.com</url>
+            <timezone>-8</timezone>
         </developer>
     </developers>
 
