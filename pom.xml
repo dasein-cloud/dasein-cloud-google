@@ -3,7 +3,7 @@
 
     <groupId>org.dasein</groupId>
     <artifactId>dasein-cloud-google</artifactId>
-    <version>2015.06.7-SNAPSHOT</version>
+    <version>2015.06.7</version>
 
     <name>Dasein Cloud Google</name>
     <description>
@@ -122,7 +122,7 @@
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20141113</version>
+            <version>20090211</version>
         </dependency>
 
         <!-- Test -->
