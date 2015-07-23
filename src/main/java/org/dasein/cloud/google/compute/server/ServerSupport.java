@@ -17,18 +17,50 @@
  * ====================================================================
  */
 
+/* Contains code based on example code from https://cloud.google.com/compute/docs/instances/automate-pw-generation 
+ * which is licensed under the following license.
+ * 
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
 package org.dasein.cloud.google.compute.server;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.Security;
+import java.security.spec.RSAPublicKeySpec;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +68,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.crypto.Cipher;
 
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
@@ -58,10 +91,10 @@ import org.dasein.cloud.compute.VirtualMachineProductFilterOptions;
 import org.dasein.cloud.compute.VmState;
 import org.dasein.cloud.compute.VolumeAttachment;
 import org.dasein.cloud.compute.VolumeCreateOptions;
-import org.dasein.cloud.google.GoogleOperationType;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
 import org.dasein.cloud.google.capabilities.GCEInstanceCapabilities;
 import org.dasein.cloud.network.RawAddress;
 import org.dasein.cloud.network.VLAN;
@@ -80,8 +113,12 @@ import org.dasein.util.uom.time.TimePeriod;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.AccessConfig;
 import com.google.api.services.compute.model.AttachedDisk;
@@ -100,6 +137,7 @@ import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.SerialPortOutput;
 import com.google.api.services.compute.model.Tags;
+import com.google.common.io.BaseEncoding;
 
 public class ServerSupport extends AbstractVMSupport<Google> {
 
@@ -237,7 +275,9 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                     String zone = it.next();
                     if(instances.getItems() != null && instances.getItems().get(zone) != null && instances.getItems().get(zone).getInstances() != null){
                         for(Instance instance : instances.getItems().get(zone).getInstances()){
-                            if(instance.getName().equals(getVmNameFromId(vmId)))return toVirtualMachine(instance);
+                            if(instance.getName().equals(getVmNameFromId(vmId))) {
+                                return toVirtualMachine(instance);
+                            }
                         }
                     }
                 }
@@ -290,13 +330,13 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             throw new InternalException("Root disk " + hostName + " already exists.");
         }
     }
-    
-	@Override
-	public @Nonnull VirtualMachine launch(@Nonnull VMLaunchOptions withLaunchOptions)throws CloudException, InternalException {
-        APITrace.begin(getProvider(), "launchVM");
-        
+
+    @Override
+    public @Nonnull VirtualMachine launch(@Nonnull VMLaunchOptions withLaunchOptions) throws CloudException, InternalException {
+        APITrace.begin(getProvider(), "launchVM"); //  windows-cloud_windows-server-2012-r2-dc-v20150629
+
         validateLaunchOptions(withLaunchOptions); // this will exception out on problem.
-        
+
         try{
             Compute gce = provider.getGoogleCompute();
             GoogleMethod method = new GoogleMethod(provider);
@@ -338,10 +378,10 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             else
                 throw new CloudException("Problem getting the contentLink tag value from the image for " + withLaunchOptions.getMachineImageId());
             rootVolume.setInitializeParams(params);
-            
+
             List<AttachedDisk> attachedDisks = new ArrayList<AttachedDisk>();
             attachedDisks.add(rootVolume);
-            
+
             if (withLaunchOptions.getVolumes().length > 0) {
                 for (VolumeAttachment volume : withLaunchOptions.getVolumes()) {
                     AttachedDisk vol = new AttachedDisk();
@@ -363,7 +403,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                     attachedDisks.add(vol);
                 }
             }
-            
+
             instance.setDisks(attachedDisks);
 
             AccessConfig nicConfig = new AccessConfig();
@@ -434,10 +474,10 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             instance.setTags(tags);
 
             String vmId = "";
-            try{
-            	Operation job = gce.instances().insert(provider.getContext().getAccountNumber(), withLaunchOptions.getDataCenterId(), instance).execute();
+            try {
+                Operation job = gce.instances().insert(provider.getContext().getAccountNumber(), withLaunchOptions.getDataCenterId(), instance).execute();
                 vmId = method.getOperationTarget(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, "", withLaunchOptions.getDataCenterId(), false);
-	        } catch (IOException ex) {
+            } catch (IOException ex) {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
@@ -452,8 +492,52 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 			        throw new CloudException(e);
 			    }
 			}
-            if(!vmId.equals("")){
-                return getVirtualMachine(vmId);
+
+            if (!vmId.equals("")) {
+                VirtualMachine vm = getVirtualMachine(vmId);
+
+                if (withLaunchOptions.getMachineImageId().toLowerCase().contains("windows")) {
+                    // Generate the public/private key pair for encryption and decryption.
+                    KeyPair keys = null;
+                    try {
+                        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+                        keyGen.initialize(2048); 
+
+                        keys = keyGen.genKeyPair();
+                    } catch ( NoSuchAlgorithmException e ) { 
+                        throw new InternalException(e);
+                    }
+
+                    resetPassword(vmId, withLaunchOptions.getDataCenterId(), keys);
+
+                    int retryCount = 20;
+                    while (retryCount-- > 0) {
+                        SerialPortOutput output = null;
+                        try {
+                            output = gce.instances().getSerialPortOutput(provider.getContext().getAccountNumber(), withLaunchOptions.getDataCenterId(), vmId).setPort(4).execute();
+                        } catch ( IOException e ) { 
+                            throw new CloudException(e);
+                        }
+                        System.out.println(output);
+                        // Get the last line - this will be a JSON string corresponding to the most recent password reset attempt.
+                        String[] entries = output.getContents().split("\n");
+                        String outputEntry = entries[entries.length - 1];
+
+                        // Parse output using the json-simple library.
+                        JSONParser parser = new JSONParser();
+                        try {
+                            org.json.simple.JSONObject passwordDict = (org.json.simple.JSONObject)parser.parse(outputEntry);
+                            vm.setRootUser(passwordDict.get("userName").toString());
+                            vm.setRootPassword(decryptPassword(passwordDict.get("encryptedPassword").toString(), keys));
+                            break;
+                        } catch ( Exception e ) { } // ignore exception, just means metadata not yet avail.
+
+                        try {
+                            Thread.sleep(10000);
+                        } catch ( InterruptedException e ) { }
+                    }
+                }
+                return vm;
             } else {
                 throw new CloudException("Could not find the instance: " + withLaunchOptions.getFriendlyName() + " after launch.");
             }
@@ -463,8 +547,8 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
     }
 
-	@Override
-	public @Nonnull Iterable<String> listFirewalls(@Nonnull String vmId) throws InternalException, CloudException {
+    @Override
+    public @Nonnull Iterable<String> listFirewalls(@Nonnull String vmId) throws InternalException, CloudException {
         ArrayList<String> firewalls = new ArrayList<String>();
         for(org.dasein.cloud.network.Firewall firewall : provider.getNetworkServices().getFirewallSupport().list()){
             for(String key : firewall.getTags().keySet()){
@@ -866,7 +950,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         ArrayList<RawAddress> privateAddresses = new ArrayList<RawAddress>();
         boolean firstPass = true;
         boolean isSet = false;
-        String providerAssignedIpAddressId = "";
+        String providerAssignedIpAddressId = null;
         for (NetworkInterface nic : instance.getNetworkInterfaces()) {
             if (firstPass) {
                 vm.setProviderVlanId(nic.getNetwork().substring(nic.getNetwork().lastIndexOf("/") + 1));
@@ -1030,4 +1114,112 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             APITrace.end();
         }
     }
+
+    private void resetPassword(String vmId, String dataCenterId, KeyPair keys) throws InternalException, CloudException {
+        Compute gce = provider.getGoogleCompute();
+        Instance inst;
+        try {
+            inst = gce.instances().get(provider.getContext().getAccountNumber(), dataCenterId, vmId).execute();
+        } catch ( IOException e ) {
+            throw new CloudException(e); 
+        }
+        Metadata metadata = inst.getMetadata();
+
+        replaceMetadata(metadata, buildKeyMetadata(keys, "admin", "")); // administrator appears to be reserved
+
+        // Tell Compute Engine to update the instance metadata with our changes.
+        try {
+            gce.instances().setMetadata(provider.getContext().getAccountNumber(), dataCenterId, vmId, metadata).execute();
+        } catch ( IOException e ) {
+            throw new CloudException(e); 
+        }
+        try {
+            Thread.sleep(30000);
+        } catch ( InterruptedException e ) { }
+    }
+
+    private String decryptPassword(String message, KeyPair keys) throws InternalException {
+        try {
+            Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+
+            Cipher rsaOAEPPadding = Cipher.getInstance("RSA/NONE/OAEPPadding", "BC");
+            rsaOAEPPadding.init(Cipher.DECRYPT_MODE, keys.getPrivate());
+
+            return new String(rsaOAEPPadding.doFinal(Base64.decodeBase64(message)), "UTF8");
+        } catch (Exception e) {
+            throw new InternalException(e);
+        }
+    }
+
+    private void replaceMetadata(Metadata metadata, JSONObject newMetadataItem) {
+        String newItemString = newMetadataItem.toString();
+
+        List<Items> items = metadata.getItems();
+
+        if (items == null) {
+            items = new LinkedList<Items>();
+            metadata.setItems(items);
+        }
+
+        // Find the "windows-keys" entry and update it.
+        for (Items item : items) {
+            if (item.getKey().compareTo("windows-keys") == 0) {
+                item.setValue(newItemString);
+                return;
+            }
+        }
+        items.add(new Items().setKey("windows-keys").setValue(newItemString));
+    }
+
+      private JSONObject buildKeyMetadata(KeyPair pair, String userName, String email) throws InternalException {
+          JSONObject metadataValues = jsonEncode(pair);
+
+          for(String key : JSONObject.getNames(metadataValues)) {
+              try {
+                  metadataValues.put(key, metadataValues.get(key));
+              } catch ( JSONException e ) { }
+          }
+
+          // Create the date on which the new keys expire.
+          Date now = new Date();
+          Date expireDate = new Date(now.getTime() + 360000); // 6 minutes
+
+          SimpleDateFormat rfc3339Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+          rfc3339Format.setTimeZone(TimeZone.getTimeZone("UTC"));
+          String dateString = rfc3339Format.format(expireDate);
+
+          try {
+              metadataValues.put("userName", userName);
+              metadataValues.put("email", email);
+              metadataValues.put("expireOn", dateString);
+          } catch ( JSONException e ) { 
+              throw new InternalException(e);
+          }
+
+          return metadataValues;
+      }
+
+      private JSONObject jsonEncode(KeyPair keys) throws InternalException {
+          JSONObject returnJson = new JSONObject();
+          try {
+              KeyFactory factory = KeyFactory.getInstance("RSA");
+
+              RSAPublicKeySpec pubSpec = factory.getKeySpec(keys.getPublic(), RSAPublicKeySpec.class);
+
+              BigInteger modulus = pubSpec.getModulus();
+              BigInteger exponent = pubSpec.getPublicExponent();
+
+              BaseEncoding stringEncoder = BaseEncoding.base64();
+
+              // Strip out the leading 0 byte in the modulus.
+              byte[] arr = Arrays.copyOfRange(modulus.toByteArray(), 1, modulus.toByteArray().length);
+
+              returnJson.put("modulus", stringEncoder.encode(arr).replaceAll("\n", ""));
+              returnJson.put("exponent", stringEncoder.encode(exponent.toByteArray()).replaceAll("\n", ""));
+          } catch ( Exception e ) { 
+              throw new InternalException(e);
+          }
+
+          return returnJson;
+      }
 }
