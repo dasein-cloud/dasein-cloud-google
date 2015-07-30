@@ -295,4 +295,9 @@ public class GCELoadBalancerCapabilities extends AbstractCapabilities<Google> im
         return true;
     }
 
+    @Override
+    public boolean healthCheckRequiresListener() throws CloudException, InternalException {
+        return false;
+    }
+
 }
