@@ -29,4 +29,13 @@ public class GCEVPNCapabilities extends AbstractCapabilities<Google> implements 
         return Collections.unmodifiableList(Arrays.asList(VPNProtocol.IKE_V1, VPNProtocol.IKE_V2));
     }
 
+    @Override
+    public @Nonnull boolean supportsGateway() throws CloudException, InternalException {
+        return false;
+    }
+
+    @Override
+    public @Nonnull boolean supportsVPNGateway() throws CloudException, InternalException {
+        return true;
+    }
 }
