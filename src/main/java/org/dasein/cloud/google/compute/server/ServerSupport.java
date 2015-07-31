@@ -314,9 +314,9 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 
         if (withLaunchOptions.getHostName() == null || withLaunchOptions.getHostName().equals("")) {
             throw new InternalException("A hostname must be specified when launching an instance");
-        }   
+        }
 
-        if (withLaunchOptions.getVlanId().equals("")) {
+        if (withLaunchOptions.getVlanId() == null || withLaunchOptions.getVlanId().equals("")) {
             throw new InternalException("A vlan must be specified when launching an instance");
         } else {
             VLAN vlan = provider.getNetworkServices().getVlanSupport().getVlan(withLaunchOptions.getVlanId());
