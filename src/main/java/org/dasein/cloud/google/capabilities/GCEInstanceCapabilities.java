@@ -189,7 +189,7 @@ public class GCEInstanceCapabilities extends AbstractCapabilities<Google> implem
     @Nonnull
     @Override
     public Requirement identifyShellKeyRequirement( Platform platform ) throws CloudException, InternalException {
-        return Requirement.NONE;
+        return Requirement.OPTIONAL;
     }
 
     @Nonnull
