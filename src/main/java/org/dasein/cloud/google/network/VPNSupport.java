@@ -27,7 +27,7 @@ import org.dasein.cloud.network.VPNConnection;
 import org.dasein.cloud.network.VPNConnectionState;
 import org.dasein.cloud.network.VPNGateway;
 import org.dasein.cloud.network.VPNGatewayState;
-import org.dasein.cloud.network.VPNLaunchOptions;
+import org.dasein.cloud.network.VpnLaunchOptions;
 import org.dasein.cloud.network.VPNProtocol;
 import org.dasein.cloud.network.VPNState;
 import org.dasein.cloud.util.APITrace;
@@ -77,7 +77,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
     }
 
     @Override
-    public VPN createVPN(VPNLaunchOptions vpnLaunchOptions) throws CloudException, InternalException {
+    public VPN createVPN(VpnLaunchOptions vpnLaunchOptions) throws CloudException, InternalException {
         APITrace.begin(provider, "createVPN");
         VPN vpn = new VPN();
         try {
@@ -103,9 +103,9 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
                 String ipAddress = getProvider().getNetworkServices().getIpAddressSupport().request(IPVersion.IPV4);
                 vpn.setProviderVpnIP(getProvider().getNetworkServices().getIpAddressSupport().getIpAddress(ipAddress).getRawAddress().getIpAddress());
 
-                createForwardingRule(vpnLaunchOptions.getName(), "-rule-esp", vpn.getProviderVpnIP(), "ESP", null);
-                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp500", vpn.getProviderVpnIP(), "UDP", "500");
-                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp4500", vpn.getProviderVpnIP(), "UDP", "4500");
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-esp", vpn.getProviderVpnIp(), "ESP", null);
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp500", vpn.getProviderVpnIp(), "UDP", "500");
+                createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp4500", vpn.getProviderVpnIp(), "UDP", "4500");
 
             } catch ( Exception e ) {
                 throw new CloudException(e);
