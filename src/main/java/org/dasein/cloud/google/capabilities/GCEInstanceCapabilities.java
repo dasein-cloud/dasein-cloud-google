@@ -310,6 +310,6 @@ public class GCEInstanceCapabilities extends AbstractCapabilities<Google> implem
 
     @Override
     public boolean isVMProductDCConstrained() throws InternalException, CloudException {
-        return false;
+        return true; // 32-core machine types are available only in Ivy Bridge and Haswell zones.
     }
 }

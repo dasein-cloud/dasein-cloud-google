@@ -89,7 +89,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         try{
             Compute gce = getProvider().getGoogleCompute();
             IpAddress ipAddress = getIpAddress(addressId);
-
+            serverId = serverId.replaceAll("_[0-9]+$", "");  // Cope with vmName_vmId
             VirtualMachine vm = getProvider().getComputeServices().getVirtualMachineSupport().getVirtualMachine(serverId);
 
             AccessConfig accessConfig = new AccessConfig();
