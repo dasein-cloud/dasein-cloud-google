@@ -289,7 +289,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     if (networks != null && networks.size() > 0) {
                         for (Network network : networks) {
                             List<com.google.api.services.compute.model.Firewall> rulesSubset = new ArrayList <com.google.api.services.compute.model.Firewall>();
-                            if (null != rulesSubset) {
+                            if (null != rules) {
                                 for (com.google.api.services.compute.model.Firewall rule : rules)
                                     if (rule.getNetwork().equals(network.getSelfLink()))
                                         rulesSubset.add(rule);
