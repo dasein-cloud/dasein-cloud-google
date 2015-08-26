@@ -614,8 +614,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
         return products;  
     }
-	
-    @Override
+
     public Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
         if ((architecture == null) || (Architecture.I64 == architecture)) { // GCE only has I64 architecture
             String dataCenterId = null;
@@ -626,7 +625,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         } else
             return new ArrayList<VirtualMachineProduct>(); // empty!
     }
-	
+
 	@Override
 	public @Nonnull Iterable<VirtualMachine> listVirtualMachines(VMFilterOptions options)throws InternalException, CloudException {
         APITrace.begin(getProvider(), "listVirtualMachines");

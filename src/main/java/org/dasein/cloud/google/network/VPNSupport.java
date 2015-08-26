@@ -27,7 +27,7 @@ import org.dasein.cloud.network.VPNConnection;
 import org.dasein.cloud.network.VPNConnectionState;
 import org.dasein.cloud.network.VPNGateway;
 import org.dasein.cloud.network.VPNGatewayState;
-import org.dasein.cloud.network.VpnLaunchOptions;
+import org.dasein.cloud.network.VpnCreateOptions;
 import org.dasein.cloud.network.VPNProtocol;
 import org.dasein.cloud.network.VPNState;
 import org.dasein.cloud.util.APITrace;
@@ -70,14 +70,8 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN");
     }
 
-    @Deprecated
     @Override
-    public VPN createVPN(String inProviderDataCenterId, String name, String description, VPNProtocol protocol) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN(String inProviderDataCenterId, String name, String description, String providerVlanId, VPNProtocol protocol)");
-    }
-
-    @Override
-    public VPN createVPN(VpnLaunchOptions vpnLaunchOptions) throws CloudException, InternalException {
+    public VPN createVPN(VpnCreateOptions vpnLaunchOptions) throws CloudException, InternalException {
         APITrace.begin(provider, "createVPN");
         VPN vpn = new VPN();
         try {
@@ -312,11 +306,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         }
 
         return toVPNGateway(vpnAfter); 
-    }
-
-    @Override
-    public VPNGateway getVPNGateway(String gatewayId) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("Gateway are not supported by GCE VPN's");
     }
 
     @Override

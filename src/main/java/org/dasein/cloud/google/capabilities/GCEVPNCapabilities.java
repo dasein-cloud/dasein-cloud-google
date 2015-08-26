@@ -9,6 +9,7 @@ import org.dasein.cloud.AbstractCapabilities;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.Requirement;
+import org.dasein.cloud.VisibleScope;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.network.VPNCapabilities;
 import org.dasein.cloud.network.VPNProtocol;
@@ -30,12 +31,7 @@ public class GCEVPNCapabilities extends AbstractCapabilities<Google> implements 
     }
 
     @Override
-    public @Nonnull boolean supportsGateway() throws CloudException, InternalException {
-        return false;
-    }
-
-    @Override
-    public @Nonnull boolean supportsVPNGateway() throws CloudException, InternalException {
-        return true;
+    public VisibleScope getVpnVisibleScope() {
+        return VisibleScope.ACCOUNT_REGION;
     }
 }
