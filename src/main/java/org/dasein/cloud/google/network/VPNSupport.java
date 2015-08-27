@@ -30,7 +30,7 @@ import org.dasein.cloud.network.VPNGatewayCreateOptions;
 import org.dasein.cloud.network.VPNGatewayState;
 import org.dasein.cloud.network.VPNProtocol;
 import org.dasein.cloud.network.VPNState;
-import org.dasein.cloud.network.VpnCreateOptions;
+import org.dasein.cloud.network.VPNCreateOptions;
 import org.dasein.cloud.util.APITrace;
 
 import com.google.api.services.compute.Compute;
@@ -67,7 +67,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
     }
 
     @Override
-    public VPN createVPN(VpnCreateOptions vpnLaunchOptions) throws CloudException, InternalException {
+    public VPN createVPN(VPNCreateOptions vpnLaunchOptions) throws CloudException, InternalException {
         APITrace.begin(provider, "createVPN");
         VPN vpn = new VPN();
         try {
