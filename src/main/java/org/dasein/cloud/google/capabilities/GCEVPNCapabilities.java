@@ -11,10 +11,10 @@ import org.dasein.cloud.InternalException;
 import org.dasein.cloud.Requirement;
 import org.dasein.cloud.VisibleScope;
 import org.dasein.cloud.google.Google;
-import org.dasein.cloud.network.VPNCapabilities;
-import org.dasein.cloud.network.VPNProtocol;
+import org.dasein.cloud.network.VpnCapabilities;
+import org.dasein.cloud.network.VpnProtocol;
 
-public class GCEVPNCapabilities extends AbstractCapabilities<Google> implements VPNCapabilities {
+public class GCEVPNCapabilities extends AbstractCapabilities<Google> implements VpnCapabilities {
 
     public GCEVPNCapabilities(Google provider) {
         super(provider);
@@ -26,8 +26,8 @@ public class GCEVPNCapabilities extends AbstractCapabilities<Google> implements 
     }
 
     @Override
-    public @Nonnull Iterable<VPNProtocol> listSupportedVPNProtocols() throws CloudException, InternalException {
-        return Collections.unmodifiableList(Arrays.asList(VPNProtocol.IKE_V1, VPNProtocol.IKE_V2));
+    public @Nonnull Iterable<VpnProtocol> listSupportedVPNProtocols() throws CloudException, InternalException {
+        return Collections.unmodifiableList(Arrays.asList(VpnProtocol.IKE_V1, VpnProtocol.IKE_V2));
     }
 
     @Override
