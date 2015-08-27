@@ -15,9 +15,9 @@ import org.dasein.cloud.Requirement;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.dc.Region;
 import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.capabilities.GCEVPNCapabilities;
-import org.dasein.cloud.google.GoogleOperationType;
 import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.capabilities.GCEVPNCapabilities;
 import org.dasein.cloud.identity.ServiceAction;
 import org.dasein.cloud.network.AbstractVPNSupport;
 import org.dasein.cloud.network.IPVersion;
@@ -26,10 +26,11 @@ import org.dasein.cloud.network.VPNCapabilities;
 import org.dasein.cloud.network.VPNConnection;
 import org.dasein.cloud.network.VPNConnectionState;
 import org.dasein.cloud.network.VPNGateway;
+import org.dasein.cloud.network.VPNGatewayCreateOptions;
 import org.dasein.cloud.network.VPNGatewayState;
-import org.dasein.cloud.network.VpnCreateOptions;
 import org.dasein.cloud.network.VPNProtocol;
 import org.dasein.cloud.network.VPNState;
+import org.dasein.cloud.network.VpnCreateOptions;
 import org.dasein.cloud.util.APITrace;
 
 import com.google.api.services.compute.Compute;
@@ -62,11 +63,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
 
     @Override
     public void attachToVLAN(String providerVpnId, String providerVlanId) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN");
-    }
-
-    @Override
-    public void connectToGateway(String providerVpnId, String toGatewayId) throws CloudException, InternalException {
         throw new OperationNotSupportedException("vlans are integral in GCE VPNS and are attached by createVPN");
     }
 
@@ -176,6 +172,45 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
     }
 
     @Override
+    public @Nonnull VPNGateway createVPNGateway(@Nonnull VPNGatewayCreateOptions vpnGatewayCreateOptions) throws CloudException, InternalException {
+        APITrace.begin(provider, "createVPNGateway");
+        try {
+            GoogleMethod method = new GoogleMethod(getProvider());
+            Compute gce = getProvider().getGoogleCompute();
+            Operation op = null;
+
+            VpnTunnel content = new VpnTunnel();
+            content.setName(vpnGatewayCreateOptions.getName());
+            content.setDescription(vpnGatewayCreateOptions.getDescription());
+            if (VPNProtocol.IKE_V1 == vpnGatewayCreateOptions.getProtocol()) {
+                content.setIkeVersion(1);
+            } else if (VPNProtocol.IKE_V2 == vpnGatewayCreateOptions.getProtocol()) {
+                content.setIkeVersion(2);
+            }
+            content.setPeerIp(vpnGatewayCreateOptions.getEndpoint());
+            content.setSharedSecret(vpnGatewayCreateOptions.getSharedSecret());
+
+            content.setTargetVpnGateway(gce.getBaseUrl() + getContext().getAccountNumber() + "/regions/" + getContext().getRegionId() +"/targetVpnGateways/" + vpnGatewayCreateOptions.getVpnName());
+            op = gce.vpnTunnels().insert(getContext().getAccountNumber(), getContext().getRegionId(), content).execute();
+            method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
+
+            createRoute(vpnGatewayCreateOptions.getName(), vpnGatewayCreateOptions.getVlanName(), vpnGatewayCreateOptions.getDescription(), vpnGatewayCreateOptions.getCidr(), getContext().getRegionId());
+
+            VpnTunnel vpnAfter = gce.vpnTunnels().get(getContext().getAccountNumber(), getContext().getRegionId(), vpnGatewayCreateOptions.getName()).execute();
+
+            return toVPNGateway(vpnAfter);
+        } catch ( Exception e ) {
+            throw new CloudException(e);
+        } finally {
+            APITrace.end();
+        }
+    }
+
+    @Override
+    public void connectToGateway(String providerVpnId, String toGatewayId) throws CloudException, InternalException {
+        throw new OperationNotSupportedException("connectToGateway in GCE VPNS is performed by createVPNGateway");
+    }
+/*
     public VPNGateway connectToVPNGateway(String vpnName, String endpoint, String name, String description, VPNProtocol protocol, String sharedSecret, String cidr) throws CloudException, InternalException {
         APITrace.begin(provider, "connectToVPNGateway");
         try {
@@ -197,8 +232,8 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
             content.setTargetVpnGateway(gce.getBaseUrl() + getContext().getAccountNumber() + "/regions/" + getContext().getRegionId() +"/targetVpnGateways/" + vpnName);
             op = gce.vpnTunnels().insert(getContext().getAccountNumber(), getContext().getRegionId(), content).execute();
             method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
-
-            createRoute(name, vpnName, description, cidr, getContext().getRegionId());
+            // change vpnName to be vpn1-network
+            //createRoute(name, vlanName, description, cidr, getContext().getRegionId());
 
             VpnTunnel vpnAfter = gce.vpnTunnels().get(getContext().getAccountNumber(), getContext().getRegionId(), name).execute();
 
@@ -209,6 +244,7 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
             APITrace.end();
         }
     }
+*/
 
     private void createRoute(String vpnName, String name, String description, String cidr, String providerRegionId) throws CloudException, InternalException {
         GoogleMethod method = new GoogleMethod(getProvider());
@@ -274,11 +310,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
         }
 
         return vpnGateway;
-    }
-
-    @Override
-    public VPNGateway createVPNGateway(String endpoint, String name, String description, VPNProtocol protocol, String bgpAsn) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("GCE VPNS do not support bgpAsn. See connectToGateway");
     }
 
     @Override
