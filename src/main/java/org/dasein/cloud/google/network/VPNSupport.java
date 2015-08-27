@@ -210,41 +210,6 @@ public class VPNSupport extends AbstractVPNSupport<Google> {
     public void connectToGateway(String providerVpnId, String toGatewayId) throws CloudException, InternalException {
         throw new OperationNotSupportedException("connectToGateway in GCE VPNS is performed by createVPNGateway");
     }
-/*
-    public VPNGateway connectToVPNGateway(String vpnName, String endpoint, String name, String description, VPNProtocol protocol, String sharedSecret, String cidr) throws CloudException, InternalException {
-        APITrace.begin(provider, "connectToVPNGateway");
-        try {
-            GoogleMethod method = new GoogleMethod(getProvider());
-            Compute gce = getProvider().getGoogleCompute();
-            Operation op = null;
-
-            VpnTunnel content = new VpnTunnel();
-            content.setName(name);
-            content.setDescription(description);
-            if (VPNProtocol.IKE_V1 == protocol) {
-                content.setIkeVersion(1);
-            } else if (VPNProtocol.IKE_V2 == protocol) {
-                content.setIkeVersion(2);
-            }
-            content.setPeerIp(endpoint);
-            content.setSharedSecret(sharedSecret);
-
-            content.setTargetVpnGateway(gce.getBaseUrl() + getContext().getAccountNumber() + "/regions/" + getContext().getRegionId() +"/targetVpnGateways/" + vpnName);
-            op = gce.vpnTunnels().insert(getContext().getAccountNumber(), getContext().getRegionId(), content).execute();
-            method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
-            // change vpnName to be vpn1-network
-            //createRoute(name, vlanName, description, cidr, getContext().getRegionId());
-
-            VpnTunnel vpnAfter = gce.vpnTunnels().get(getContext().getAccountNumber(), getContext().getRegionId(), name).execute();
-
-            return toVPNGateway(vpnAfter);
-        } catch ( Exception e ) {
-            throw new CloudException(e);
-        } finally {
-            APITrace.end();
-        }
-    }
-*/
 
     private void createRoute(String vpnName, String name, String description, String cidr, String providerRegionId) throws CloudException, InternalException {
         GoogleMethod method = new GoogleMethod(getProvider());
