@@ -518,7 +518,6 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                         } catch ( IOException e ) { 
                             throw new CloudException(e);
                         }
-                        System.out.println(output);
                         // Get the last line - this will be a JSON string corresponding to the most recent password reset attempt.
                         String[] entries = output.getContents().split("\n");
                         String outputEntry = entries[entries.length - 1];
