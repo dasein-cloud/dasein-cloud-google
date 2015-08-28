@@ -1142,7 +1142,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
         Metadata metadata = inst.getMetadata();
 
-        replaceMetadata(metadata, buildKeyMetadata(keys, "admin", "")); // administrator appears to be reserved
+        replaceMetadata(metadata, buildKeyMetadata(keys, "Admin", "")); // administrator appears to be reserved
 
         // Tell Compute Engine to update the instance metadata with our changes.
         try {
