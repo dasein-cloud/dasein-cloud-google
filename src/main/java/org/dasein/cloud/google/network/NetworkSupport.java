@@ -62,6 +62,7 @@ import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.NetworkList;
 import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.RouteList;
 
 /**
  * Implements the network services supported in the Google API.
@@ -409,8 +410,9 @@ public class NetworkSupport extends AbstractVLANSupport {
 	public void removeVlan(String vlanId) throws CloudException, InternalException {
         APITrace.begin(provider, "VLAN.removeVlan");
         try{
-            Operation job = null;
+            Operation op = null;
             try{
+                GoogleMethod method = new GoogleMethod(provider);
                 Compute gce = provider.getGoogleCompute();
                 VLAN vlan = getVlan(vlanId);
 
@@ -421,9 +423,18 @@ public class NetworkSupport extends AbstractVLANSupport {
                     fws.revoke(rule.getProviderRuleId());
                 }
 
-                job = gce.networks().delete(provider.getContext().getAccountNumber(), vlan.getName()).execute();
-                GoogleMethod method = new GoogleMethod(provider);
-                if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")){
+                // need to remove routes if present before vlan can be removed.
+                RouteList routes = gce.routes().list(getContext().getAccountNumber()).execute();
+                for (com.google.api.services.compute.model.Route route : routes.getItems()) {
+                    if (route.getNetwork().replaceAll(".*/", "").equals(vlanId) && !route.getName().startsWith("default-route-")) {
+                        op = gce.routes().delete(getContext().getAccountNumber(), route.getName()).execute();
+                        method.getOperationComplete(provider.getContext(), op, GoogleOperationType.GLOBAL_OPERATION, "", "");
+                    }
+                }
+
+                op = gce.networks().delete(provider.getContext().getAccountNumber(), vlan.getName()).execute();
+
+                if(!method.getOperationComplete(provider.getContext(), op, GoogleOperationType.GLOBAL_OPERATION, "", "")){
                     throw new CloudException("An error occurred while removing network: " + vlanId + ": Operation timed out");
                 }
     	    } catch (IOException ex) {

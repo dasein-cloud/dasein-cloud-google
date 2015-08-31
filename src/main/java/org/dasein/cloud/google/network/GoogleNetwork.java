@@ -69,7 +69,7 @@ public class GoogleNetwork extends AbstractNetworkServices<Google> {
     }
 
     @Override
-    public @Nullable VPNSupport getVpnSupport() {
-        return new VPNSupport(getProvider()); 
+    public @Nullable VpnSupport getVpnSupport() {
+        return new VpnSupport(getProvider()); 
     }
 }

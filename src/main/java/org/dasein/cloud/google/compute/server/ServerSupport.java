@@ -336,7 +336,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         APITrace.begin(getProvider(), "launchVM"); //  windows-cloud_windows-server-2012-r2-dc-v20150629
 
         validateLaunchOptions(withLaunchOptions); // this will exception out on problem.
-
+        boolean windows = false;
         try{
             Compute gce = provider.getGoogleCompute();
             GoogleMethod method = new GoogleMethod(provider);
@@ -360,9 +360,13 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             // do not use withLaunchOptions.getFriendlyName() it is non compliant!!!
             params.setDiskName(hostName);
             // Not Optimum solution, update in core should come next release to have this be part of MachineImage
+
             try {
                 String[] parts = withLaunchOptions.getMachineImageId().split("_");
                 Image img = gce.images().get(parts[0], parts[1]).execute();
+
+                windows = guessWindows(img);
+
                 Long size = img.getDiskSizeGb();
                 String diskSizeGb = size.toString();
                 if (null == diskSizeGb) {
@@ -496,7 +500,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             if (!vmId.equals("")) {
                 VirtualMachine vm = getVirtualMachine(vmId);
 
-                if (withLaunchOptions.getMachineImageId().toLowerCase().contains("windows")) {
+                if (windows) {
                     // Generate the public/private key pair for encryption and decryption.
                     KeyPair keys = null;
                     try {
@@ -518,7 +522,6 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                         } catch ( IOException e ) { 
                             throw new CloudException(e);
                         }
-                        System.out.println(output);
                         // Get the last line - this will be a JSON string corresponding to the most recent password reset attempt.
                         String[] entries = output.getContents().split("\n");
                         String outputEntry = entries[entries.length - 1];
@@ -545,6 +548,21 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         finally {
             APITrace.end();
         }
+    }
+
+    private boolean guessWindows(Image img) {
+        for (String license : img.getLicenses()) {
+            if (license.contains("windows")) {
+                return true;
+            }
+        }
+
+        if (img.getDescription().toLowerCase().contains("windows") ||
+            img.getName().toLowerCase().contains("windows")) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -614,8 +632,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
         return products;  
     }
-	
-    @Override
+
     public Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
         if ((architecture == null) || (Architecture.I64 == architecture)) { // GCE only has I64 architecture
             String dataCenterId = null;
@@ -626,7 +643,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         } else
             return new ArrayList<VirtualMachineProduct>(); // empty!
     }
-	
+
 	@Override
 	public @Nonnull Iterable<VirtualMachine> listVirtualMachines(VMFilterOptions options)throws InternalException, CloudException {
         APITrace.begin(getProvider(), "listVirtualMachines");
@@ -1125,7 +1142,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
         Metadata metadata = inst.getMetadata();
 
-        replaceMetadata(metadata, buildKeyMetadata(keys, "admin", "")); // administrator appears to be reserved
+        replaceMetadata(metadata, buildKeyMetadata(keys, "Admin", "")); // administrator appears to be reserved
 
         // Tell Compute Engine to update the instance metadata with our changes.
         try {
