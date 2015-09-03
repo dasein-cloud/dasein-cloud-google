@@ -994,6 +994,13 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 }
             }
         }
+
+        for (Items metadataItem : instance.getMetadata().getItems()) {
+            if (metadataItem.getKey().equals("sshKeys")) {
+                vm.setRootUser(metadataItem.getValue().replaceAll(":.*", ""));
+            }
+        }
+
         vm.setPublicAddresses(publicAddresses.toArray(new RawAddress[publicAddresses.size()]));
         vm.setPrivateAddresses(privateAddresses.toArray(new RawAddress[privateAddresses.size()]));
         vm.setProviderAssignedIpAddressId(providerAssignedIpAddressId);
