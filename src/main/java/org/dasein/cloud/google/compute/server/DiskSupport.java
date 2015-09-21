@@ -347,21 +347,22 @@ public class DiskSupport extends AbstractVolumeSupport {
         try{
             Compute gce = provider.getGoogleCompute();
             Volume volume = getVolume(volumeId);
-
-            try{
-                Operation job = gce.disks().delete(provider.getContext().getAccountNumber(), volume.getProviderDataCenterId(), volume.getProviderVolumeId()).execute();
-                GoogleMethod method = new GoogleMethod(provider);
-                if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, "", volume.getProviderDataCenterId())){
-                    throw new CloudException("An error occurred while deleting the Volume: Operation Timedout");
-                }
-	        } catch (IOException ex) {
-				logger.error(ex.getMessage());
-				if (ex.getClass() == GoogleJsonResponseException.class) {
-					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
-					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new CloudException("An error occurred while deleting the volume: " + ex.getMessage());
-			}
+            if (null != volume) {
+                try{
+                    Operation job = gce.disks().delete(provider.getContext().getAccountNumber(), volume.getProviderDataCenterId(), volume.getProviderVolumeId()).execute();
+                    GoogleMethod method = new GoogleMethod(provider);
+                    if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, "", volume.getProviderDataCenterId())){
+                        throw new CloudException("An error occurred while deleting the Volume: Operation Timedout");
+                    }
+    	        } catch (IOException ex) {
+    				logger.error(ex.getMessage());
+    				if (ex.getClass() == GoogleJsonResponseException.class) {
+    					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
+    					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
+    				} else
+    					throw new CloudException("An error occurred while deleting the volume: " + ex.getMessage());
+    			}
+            }
         }
         finally {
             APITrace.end();
