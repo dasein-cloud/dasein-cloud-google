@@ -995,7 +995,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             }
         }
 
-        if(instance.getMetadata() != null){
+        if(instance.getMetadata() != null && instance.getMetadata().getItems() != null){
             for (Items metadataItem : instance.getMetadata().getItems()) {
                 if (metadataItem.getKey().equals("sshKeys")) {
                     vm.setRootUser(metadataItem.getValue().replaceAll(":.*", ""));
