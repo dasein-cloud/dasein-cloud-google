@@ -164,6 +164,12 @@ public class GCEInstanceCapabilities extends AbstractCapabilities<Google> implem
 
     @Nonnull
     @Override
+    public String[] getVirtualMachineReservedUserNames() {
+        return new String[0];
+    }
+
+    @Nonnull
+    @Override
     public Requirement identifyDataCenterLaunchRequirement() throws CloudException, InternalException {
         return Requirement.REQUIRED;
     }
@@ -172,6 +178,12 @@ public class GCEInstanceCapabilities extends AbstractCapabilities<Google> implem
     @Override
     public Requirement identifyImageRequirement( @Nonnull ImageClass cls ) throws CloudException, InternalException {
         return ( cls.equals(ImageClass.MACHINE) ? Requirement.REQUIRED : Requirement.NONE );
+    }
+
+    @Nonnull
+    @Override
+    public Requirement identifyUsernameRequirement() throws CloudException, InternalException {
+        return Requirement.REQUIRED;
     }
 
     @Nonnull
@@ -295,6 +307,11 @@ public class GCEInstanceCapabilities extends AbstractCapabilities<Google> implem
 
     @Override
     public boolean isUserDefinedPrivateIPSupported() throws CloudException, InternalException {
+        return false;
+    }
+
+    @Override
+    public boolean isRootPasswordSSHKeyEncrypted() throws CloudException, InternalException {
         return false;
     }
 

@@ -522,7 +522,6 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                         } catch ( IOException e ) { 
                             throw new CloudException(e);
                         }
-                        System.out.println(output);
                         // Get the last line - this will be a JSON string corresponding to the most recent password reset attempt.
                         String[] entries = output.getContents().split("\n");
                         String outputEntry = entries[entries.length - 1];
@@ -579,6 +578,11 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         return firewalls;
     }
 
+    @Override
+    public @Nonnull Iterable<VirtualMachineProduct> listAllProducts() throws CloudException, InternalException{
+        return listProducts(VirtualMachineProductFilterOptions.getInstance(), null);
+    }
+
 	public @Nonnull Iterable<VirtualMachineProduct> listProducts(@Nonnull Architecture architecture, String preferredDataCenterId) throws InternalException, CloudException {
         MachineTypeAggregatedList machineTypes = null;
 
@@ -633,9 +637,8 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         }
         return products;  
     }
-	
-    @Override
-    public Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
+
+    private Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
         if ((architecture == null) || (Architecture.I64 == architecture)) { // GCE only has I64 architecture
             String dataCenterId = null;
             if (options != null)
@@ -645,7 +648,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         } else
             return new ArrayList<VirtualMachineProduct>(); // empty!
     }
-	
+
 	@Override
 	public @Nonnull Iterable<VirtualMachine> listVirtualMachines(VMFilterOptions options)throws InternalException, CloudException {
         APITrace.begin(getProvider(), "listVirtualMachines");

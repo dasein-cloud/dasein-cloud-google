@@ -3,12 +3,13 @@
 
     <groupId>org.dasein</groupId>
     <artifactId>dasein-cloud-google</artifactId>
-    <version>2015.06.15</version>
+    <version>2015.10.1</version>
 
     <name>Dasein Cloud Google</name>
     <description>
         Implements the Dasein Cloud API to talk to Google cloud services
     </description>
+    <url>http://github.com/greese/dasein-cloud-google</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -30,20 +31,15 @@
         <connection>scm:git:git://github.com/dasein-cloud/dasein-cloud-google.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/dasein-cloud/dasein-cloud-google.git</developerConnection>
         <url>http://github.com/dasein-cloud/dasein-cloud-google</url>
-    </scm>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>5</version>
-    </parent>
+      <tag>dasein-cloud-google-2015.10.1</tag>
+  </scm>
 
     <dependencies>
         <!-- Compile -->
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-core</artifactId>
-            <version>2015.06.1</version>
+            <version>2015.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.dasein</groupId>
@@ -67,12 +63,12 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-compute</artifactId>
-            <version>v1-rev66-1.20.0</version>
+            <version>v1-rev79-1.19.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-storage</artifactId>
-            <version>v1-rev35-1.20.0</version>
+            <version>v1-rev49-1.20.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
@@ -82,7 +78,7 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-sqladmin</artifactId>
-            <version>v1beta4-rev8-1.20.0</version>
+            <version>v1beta4-rev12-1.20.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.api-client</groupId>
@@ -92,12 +88,12 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-replicapool</artifactId>
-            <version>v1beta2-rev4-1.20.0</version>
+            <version>v1beta2-rev8-1.20.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-resourceviews</artifactId>
-            <version>v1beta2-rev6-1.20.0</version>
+            <version>v1beta2-rev10-1.20.0</version>
         </dependency>
         <dependency>
             <groupId>joda-time</groupId>
@@ -107,7 +103,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>14.0-rc2</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.json-simple</groupId>
@@ -129,13 +125,21 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-test</artifactId>
-            <version>2015.06.1</version>
+            <version>2015.10.2</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.9</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jmockit</groupId> 
+            <artifactId>jmockit</artifactId> 
+            <version>1.19</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -216,11 +220,25 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.1</version>
+                <version>2.5.3</version>
             </plugin>
+
+            <!-- unit tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/TestSuite.class</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- integration tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.6</version>
                 <configuration>
                     <systemProperties>
@@ -305,7 +323,16 @@
                         <exclude>**/TestSuite.java</exclude>
                     </excludes>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
+
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
@@ -319,6 +346,31 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>sonatype-nexus-staging</serverId>
+                    <nexusUrl>https://oss.sonatype.org</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
             </plugin>
         </plugins>
     </build>

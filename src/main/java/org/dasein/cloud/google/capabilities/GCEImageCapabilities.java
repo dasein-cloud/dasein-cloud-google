@@ -136,4 +136,9 @@ public class GCEImageCapabilities extends AbstractCapabilities<Google> implement
                 .withLastCharacterSymbolAllowed(false)
                 .constrainedBy('-');
     }
+
+    @Override
+    public boolean supportsImageRemoval() throws CloudException, InternalException {
+        return true;
+    }
 }

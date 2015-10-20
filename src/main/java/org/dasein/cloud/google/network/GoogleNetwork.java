@@ -40,6 +40,7 @@ import org.dasein.cloud.google.Google;
 import org.dasein.cloud.network.AbstractNetworkServices;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class GoogleNetwork extends AbstractNetworkServices<Google> {
 
@@ -58,12 +59,17 @@ public class GoogleNetwork extends AbstractNetworkServices<Google> {
     }
 
     @Override
-    public @Nonnull IPAddressSupport getIpAddressSupport(){
+    public @Nonnull IPAddressSupport getIpAddressSupport() {
         return new IPAddressSupport(getProvider());
     }
 
     @Override
     public @Nonnull LoadBalancerSupport getLoadBalancerSupport() {
         return new LoadBalancerSupport(getProvider());
+    }
+
+    @Override
+    public @Nullable VpnSupport getVpnSupport() {
+        return new VpnSupport(getProvider()); 
     }
 }

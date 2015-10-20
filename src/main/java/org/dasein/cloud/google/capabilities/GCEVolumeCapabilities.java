@@ -128,18 +128,18 @@ public class GCEVolumeCapabilities extends AbstractCapabilities<Google> implemen
     }
 
     @Override
-    public int getMaximumVolumeProductIOPS() throws InternalException, CloudException {
-        return 10000;
+    public boolean supportsAttach() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsDetach() {
+        return true;
     }
 
     @Override
     public int getMaximumVolumeSizeIOPS() throws InternalException, CloudException {
         return 10000;
-    }
-
-    @Override
-    public int getMinimumVolumeProductIOPS() throws InternalException, CloudException {
-        return 3000;
     }
 
     @Override
@@ -150,5 +150,10 @@ public class GCEVolumeCapabilities extends AbstractCapabilities<Google> implemen
     @Override
     public Requirement getDeviceIdOnAttachRequirement() throws InternalException, CloudException {
         return Requirement.NONE;
+    }
+
+    @Override
+    public boolean supportsIOPSVolumes() throws InternalException, CloudException {
+        return true;
     }
 }
