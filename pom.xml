@@ -3,12 +3,13 @@
 
     <groupId>org.dasein</groupId>
     <artifactId>dasein-cloud-google</artifactId>
-    <version>2015.09.1-SNAPSHOT</version>
+    <version>2015.10.1-SNAPSHOT</version>
 
     <name>Dasein Cloud Google</name>
     <description>
         Implements the Dasein Cloud API to talk to Google cloud services
     </description>
+    <url>http://github.com/greese/dasein-cloud-google</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -27,23 +28,17 @@
     </organization>
 
     <scm>
-        <connection>scm:git:git://github.com/greese/dasein-cloud-google.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/greese/dasein-cloud-google.git</developerConnection>
-        <url>http://github.com/greese/dasein-cloud-google</url>
+        <connection>scm:git:git://github.com/dasein-cloud/dasein-cloud-google.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/dasein-cloud/dasein-cloud-google.git</developerConnection>
+        <url>http://github.com/dasein-cloud/dasein-cloud-google</url>
     </scm>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>5</version>
-    </parent>
 
     <dependencies>
         <!-- Compile -->
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-core</artifactId>
-            <version>2015.09.1-SNAPSHOT</version>
+            <version>2015.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.dasein</groupId>
@@ -129,7 +124,7 @@
         <dependency>
             <groupId>org.dasein</groupId>
             <artifactId>dasein-cloud-test</artifactId>
-            <version>2015.09.1-SNAPSHOT</version>
+            <version>2015.10.2</version>
             <scope>test</scope>
         </dependency>
 
@@ -224,7 +219,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.1</version>
+                <version>2.5.3</version>
             </plugin>
 
             <!-- unit tests -->
@@ -323,9 +318,9 @@
                             <value>${proxyPort}</value>
                         </property>
                     </systemProperties>
-                    <includes>
-                        <include>**/TestSuite.java</include>
-                    </includes>
+                    <excludes>
+                        <exclude>**/TestSuite.java</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -350,6 +345,31 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>sonatype-nexus-staging</serverId>
+                    <nexusUrl>https://oss.sonatype.org</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
             </plugin>
         </plugins>
     </build>
