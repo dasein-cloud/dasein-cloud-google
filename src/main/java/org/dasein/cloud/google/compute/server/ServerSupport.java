@@ -578,6 +578,11 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         return firewalls;
     }
 
+    @Override
+    public @Nonnull Iterable<VirtualMachineProduct> listAllProducts() throws CloudException, InternalException{
+        return listProducts(VirtualMachineProductFilterOptions.getInstance(), null);
+    }
+
 	public @Nonnull Iterable<VirtualMachineProduct> listProducts(@Nonnull Architecture architecture, String preferredDataCenterId) throws InternalException, CloudException {
         MachineTypeAggregatedList machineTypes = null;
 
@@ -633,7 +638,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         return products;  
     }
 
-    public Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
+    private Iterable<VirtualMachineProduct> listProducts(VirtualMachineProductFilterOptions options, Architecture architecture) throws InternalException, CloudException{
         if ((architecture == null) || (Architecture.I64 == architecture)) { // GCE only has I64 architecture
             String dataCenterId = null;
             if (options != null)
