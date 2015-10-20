@@ -58,7 +58,27 @@ public class GCELoadBalancerCapabilities extends AbstractCapabilities<Google> im
 		return 0;
 	}
 
-	@Nonnull
+    @Override
+    public int getMaxHealthCheckTimeout() throws CloudException, InternalException {
+        return 0;
+    }
+
+    @Override
+    public int getMinHealthCheckTimeout() throws CloudException, InternalException {
+        return 0;
+    }
+
+    @Override
+    public int getMaxHealthCheckInterval() throws CloudException, InternalException {
+        return 0;
+    }
+
+    @Override
+    public int getMinHealthCheckInterval() throws CloudException, InternalException {
+        return 0;
+    }
+
+    @Nonnull
 	@Override
 	public String getProviderTermForLoadBalancer(Locale locale) {
 		return "load balancer"; // target pools are a component utilized by load balancer
@@ -267,6 +287,12 @@ public class GCELoadBalancerCapabilities extends AbstractCapabilities<Google> im
 
     @Override
     public Requirement healthCheckRequiresName() throws CloudException, InternalException {
+        return Requirement.REQUIRED;
+    }
+
+    @Nonnull
+    @Override
+    public Requirement healthCheckRequiresPort() throws CloudException, InternalException {
         return Requirement.REQUIRED;
     }
 

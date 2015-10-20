@@ -66,6 +66,11 @@ public class GCENetworkCapabilities extends AbstractCapabilities<Google> impleme
     }
 
     @Override
+    public boolean allowsDeletionOfReservedSubnets() throws CloudException, InternalException {
+        return true;
+    }
+
+    @Override
     public int getMaxNetworkInterfaceCount() throws CloudException, InternalException {
         return -2;
     }
