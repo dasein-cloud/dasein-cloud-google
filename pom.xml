@@ -46,7 +46,7 @@
             </properties>
         </profile>
         <profile>
-            <id>integration-tests</id>
+            <id>integration</id>
             <properties>
                 <skip.unit.tests>true</skip.unit.tests>
                 <skip.int.tests>false</skip.int.tests>
