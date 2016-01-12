@@ -40,41 +40,34 @@
 
 package org.dasein.cloud.google.compute.server;
 
-import java.io.IOException;
-import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.Security;
-import java.security.spec.RSAPublicKeySpec;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.crypto.Cipher;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.AttachedDisk;
+import com.google.api.services.compute.model.AttachedDiskInitializeParams;
+import com.google.api.services.compute.model.Disk;
+import com.google.api.services.compute.model.Image;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceAggregatedList;
+import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.MachineTypeAggregatedList;
+import com.google.api.services.compute.model.MachineTypeList;
+import com.google.api.services.compute.model.Metadata;
+import com.google.api.services.compute.model.Metadata.Items;
+import com.google.api.services.compute.model.NetworkInterface;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Scheduling;
+import com.google.api.services.compute.model.SerialPortOutput;
+import com.google.api.services.compute.model.Tags;
+import com.google.common.io.BaseEncoding;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.Tag;
 import org.dasein.cloud.VisibleScope;
@@ -117,27 +110,34 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.AttachedDisk;
-import com.google.api.services.compute.model.AttachedDiskInitializeParams;
-import com.google.api.services.compute.model.Disk;
-import com.google.api.services.compute.model.Image;
-import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.InstanceAggregatedList;
-import com.google.api.services.compute.model.MachineType;
-import com.google.api.services.compute.model.MachineTypeAggregatedList;
-import com.google.api.services.compute.model.MachineTypeList;
-import com.google.api.services.compute.model.Metadata;
-import com.google.api.services.compute.model.Metadata.Items;
-import com.google.api.services.compute.model.NetworkInterface;
-import com.google.api.services.compute.model.Operation;
-import com.google.api.services.compute.model.Scheduling;
-import com.google.api.services.compute.model.SerialPortOutput;
-import com.google.api.services.compute.model.Tags;
-import com.google.common.io.BaseEncoding;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.crypto.Cipher;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.Security;
+import java.security.spec.RSAPublicKeySpec;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ServerSupport extends AbstractVMSupport<Google> {
 
@@ -191,12 +191,16 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 
     public @Nonnull String getVmNameFromId(String vmId) throws InternalException, CloudException {
         if (null == vmId) {
+            //todo
+            //should we have a new exception for errors caused by user/client provided data?
             throw new InternalException("vmId cannot be null");
         }
 
         if (vmId.contains("_")) {
             String[] parts = vmId.split("_");
             if (null == parts[0]) {
+                //todo
+                //should we have a new exception for errors caused by user/client provided data?
                 throw new InternalException("vmId cannot begin with '_'");
             }
             return parts[0];
@@ -207,13 +211,15 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 
     public @Nonnull String getVmIdFromName(String vmName) throws InternalException, CloudException {
         if (null == vmName) {
+            //todo
+            //should we have a new exception for errors caused by user/client provided data?
             throw new InternalException("vmName cannot be null ");
         }
         VirtualMachine vm = getVirtualMachine(vmName);
         if ((null != vm) && (null != vm.getProviderVirtualMachineId())) {
             return vm.getProviderVirtualMachineId();
         } else {
-            throw new CloudException("Unable to lookup vmId for vm named: " + vmName);
+            throw new ResourceNotFoundException("Unable to lookup vmId for vm named: " + vmName);
         }
     }
 
@@ -233,9 +239,9 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-				throw new CloudException("An error occurred when getting console output for VM: " + vmId + ": " + ex.getMessage());
+				throw new GeneralCloudException("An error occurred when getting console output for VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 		}
-        throw new InternalException("The Virtual Machine: " + vmId + " could not be found.");
+        throw new ResourceNotFoundException("The Virtual Machine: " + vmId + " could not be found.");
 	}
 
 	@Override
@@ -259,7 +265,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-				throw new CloudException("An error occurred retrieving the product: " + productId + ": " + ex.getMessage());
+				throw new GeneralCloudException("An error occurred retrieving the product: " + productId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 		}
 	}
 
@@ -288,7 +294,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else
-					throw new CloudException("An error occurred retrieving VM: " + vmId + ": " + ex.getMessage());
+					throw new GeneralCloudException("An error occurred retrieving VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 			}
         }
         finally {
@@ -303,7 +309,8 @@ public class ServerSupport extends AbstractVMSupport<Google> {
     }
 
     public void validateLaunchOptions(@Nonnull VMLaunchOptions withLaunchOptions) throws CloudException, InternalException {
-
+        //todo
+        //should we have a new exception for errors caused by user/client provided data?
         if (withLaunchOptions.getDataCenterId() == null || withLaunchOptions.getDataCenterId().equals("")) {
             throw new InternalException("A datacenter must be specified when launching an instance");
         }
@@ -380,7 +387,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             if ((image != null) && (image.getTag("contentLink") != null))
                 params.setSourceImage((String)image.getTag("contentLink"));
             else
-                throw new CloudException("Problem getting the contentLink tag value from the image for " + withLaunchOptions.getMachineImageId());
+                throw new ResourceNotFoundException("Problem getting the contentLink tag value from the image for " + withLaunchOptions.getMachineImageId());
             rootVolume.setInitializeParams(params);
 
             List<AttachedDisk> attachedDisks = new ArrayList<AttachedDisk>();
@@ -486,14 +493,14 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else
-					throw new CloudException("An error occurred launching the instance: " + ex.getMessage());
+					throw new GeneralCloudException("An error occurred launching the instance: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 			} catch (Exception e) {
 			    if ((e.getMessage().contains("The resource")) && 
                         (e.getMessage().contains("disks")) &&
                         (e.getMessage().contains("already exists"))) {
-			        throw new CloudException("A disk named '" + withLaunchOptions.getFriendlyName() + "' already exists.");
+			        throw new GeneralCloudException("A disk named '" + withLaunchOptions.getFriendlyName() + "' already exists.", e, CloudErrorType.INVALID_USER_DATA);
 			    } else {
-			        throw new CloudException(e);
+			        throw new GeneralCloudException("Error launching vm", e, CloudErrorType.GENERAL);
 			    }
 			}
 
@@ -520,7 +527,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                         try {
                             output = gce.instances().getSerialPortOutput(provider.getContext().getAccountNumber(), withLaunchOptions.getDataCenterId(), vmId).setPort(4).execute();
                         } catch ( IOException e ) { 
-                            throw new CloudException(e);
+                            throw new GeneralCloudException("Error getting serial port output during password reset", e, CloudErrorType.GENERAL);
                         }
                         // Get the last line - this will be a JSON string corresponding to the most recent password reset attempt.
                         String[] entries = output.getContents().split("\n");
@@ -542,7 +549,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 }
                 return vm;
             } else {
-                throw new CloudException("Could not find the instance: " + withLaunchOptions.getFriendlyName() + " after launch.");
+                throw new ResourceNotFoundException("Could not find the instance: " + withLaunchOptions.getFriendlyName() + " after launch.");
             }
         }
         finally {
@@ -603,7 +610,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else
-                    throw new CloudException("An error occurred listing VM products.");
+                    throw new GeneralCloudException("An error occurred listing VM products.", ex, CloudErrorType.GENERAL);
             }
         }
 
@@ -678,7 +685,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else
-					throw new CloudException("An error occurred while listing Virtual Machines.");
+					throw new GeneralCloudException("An error occurred while listing Virtual Machines.", ex, CloudErrorType.GENERAL);
 			}
         }
         finally{
@@ -732,7 +739,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else
-					throw new CloudException("An error occurred while rebooting VM: " + vmId + ": " + ex.getMessage());
+					throw new GeneralCloudException("An error occurred while rebooting VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 			}
         }
         finally{
@@ -762,7 +769,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException("An error occurred while rebooting VM: " + vmId + ": " + ex.getMessage());
+                throw new GeneralCloudException("An error occurred while starting VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -778,7 +785,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException("An error occurred while rebooting VM: " + vmId + ": " + ex.getMessage());
+                throw new GeneralCloudException("An error occurred while stopping VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -810,7 +817,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             VirtualMachine vm = getVirtualMachine(vmId);
 
             if (null == vm) {
-                throw new CloudException("Virtual Machine " + vmId + " was not found.");
+                throw new ResourceNotFoundException("Virtual Machine " + vmId + " was not found.");
             }
 
             try {
@@ -819,7 +826,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 if(job != null) {
                     method = new GoogleMethod(provider);
                     if (false == method.getOperationComplete(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, null, zone)) {
-                        throw new CloudException("An error occurred while terminating the VM. Note: The root disk might also still exist");
+                        throw new GeneralCloudException("An error occurred while terminating the VM. Note: The root disk might also still exist", CloudErrorType.GENERAL);
                     }
                 }
             } catch (IOException ex) {
@@ -828,9 +835,9 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else
-                    throw new CloudException("An error occurred while terminating VM: " + vmId + ": " + ex.getMessage());
+                    throw new GeneralCloudException("An error occurred while terminating VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
             } catch (Exception ex) {
-                throw new CloudException(ex); // catch exception from getOperationComplete
+                throw new GeneralCloudException("An error occurred while terminating VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL); // catch exception from getOperationComplete
             }
 
         } finally {
@@ -857,9 +864,9 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                         throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                     }
                 } else
-                    throw new CloudException("An error occurred while deleting VM disk: " + diskName + ": " + ex.getMessage());
+                    throw new GeneralCloudException("An error occurred while deleting VM disk: " + diskName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
             } catch (Exception ex) {
-                throw new CloudException(ex); // catch exception from getOperationComplete
+                throw new GeneralCloudException("An error occurred while deleting VM disk: " + diskName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL); // catch exception from getOperationComplete
             }
         }
         finally{
@@ -959,7 +966,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                             GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                             throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                         } else
-                            throw new InternalException("IOException: " + ex.getMessage());
+                            throw new GeneralCloudException("IOException: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
                     }
                 }
             }
@@ -989,7 +996,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                             try {
                                 isSet = true;
                                 providerAssignedIpAddressId = provider.getNetworkServices().getIpAddressSupport().getIpAddressIdFromIP(accessConfig.getNatIP(), regionId);
-                            } catch(InternalException ex) {
+                            } catch(ResourceNotFoundException ex) {
                                 /*Likely to be an ephemeral IP*/
                             }
                         }
@@ -1138,7 +1145,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else
-                    throw new CloudException("An error occurred retrieving VM: " + vmId + ": " + ex.getMessage());
+                    throw new GeneralCloudException("An error occurred retrieving VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
             }
         }
         finally {
@@ -1152,7 +1159,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         try {
             inst = gce.instances().get(provider.getContext().getAccountNumber(), dataCenterId, vmId).execute();
         } catch ( IOException e ) {
-            throw new CloudException(e); 
+            throw new GeneralCloudException("Error resetting password", e, CloudErrorType.GENERAL);
         }
         Metadata metadata = inst.getMetadata();
 
@@ -1162,7 +1169,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         try {
             gce.instances().setMetadata(provider.getContext().getAccountNumber(), dataCenterId, vmId, metadata).execute();
         } catch ( IOException e ) {
-            throw new CloudException(e); 
+            throw new GeneralCloudException("Error resetting password", e, CloudErrorType.GENERAL);
         }
         try {
             Thread.sleep(30000);

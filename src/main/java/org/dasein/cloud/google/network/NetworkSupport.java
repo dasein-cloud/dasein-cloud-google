@@ -19,18 +19,16 @@
 
 package org.dasein.cloud.google.network;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.NetworkList;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.RouteList;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
 import org.dasein.cloud.ProviderContext;
@@ -38,10 +36,10 @@ import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.Tag;
 import org.dasein.cloud.VisibleScope;
 import org.dasein.cloud.compute.VirtualMachine;
+import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.GoogleMethod;
 import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.capabilities.GCENetworkCapabilities;
 import org.dasein.cloud.network.AbstractVLANSupport;
 import org.dasein.cloud.network.FirewallRule;
@@ -57,12 +55,13 @@ import org.dasein.cloud.network.VLAN;
 import org.dasein.cloud.network.VLANState;
 import org.dasein.cloud.util.APITrace;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.Network;
-import com.google.api.services.compute.model.NetworkList;
-import com.google.api.services.compute.model.Operation;
-import com.google.api.services.compute.model.RouteList;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Implements the network services supported in the Google API.
@@ -100,10 +99,6 @@ public class NetworkSupport extends AbstractVLANSupport {
 		//Using toRoutingTableId as vlanId - GCE supports vlan specific routes
         ProviderContext ctx = provider.getContext();
 
-        if( ctx == null ) {
-            logger.error("No context was set for this request");
-            throw new InternalException("No context was set for this request");
-        }
         Operation job = null;
         try{
             Compute gce = provider.getGoogleCompute();
@@ -130,7 +125,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-				throw new CloudException("An error occurred while creating the route: " + ex.getMessage());
+				throw new GeneralCloudException("An error occurred while creating the route: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 		}
 	}
 
@@ -141,15 +136,10 @@ public class NetworkSupport extends AbstractVLANSupport {
 		}
 		ProviderContext ctx = provider.getContext();
 
-		if( ctx == null ) {
-			logger.error("No context was set for this request");
-			throw new InternalException("No context was set for this request");
-		}
-
 		String regionId = ctx.getRegionId();
 		if( regionId == null ) {
 			logger.error("No region was set for this request");
-			throw new CloudException("No region was set for this request");
+			throw new InternalException("No region was set for this request");
 		}
 
         Operation job = null;
@@ -174,7 +164,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-				throw new CloudException("An error occurred while creating vlan: " + ex.getMessage());
+				throw new GeneralCloudException("An error occurred while creating vlan: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 		}
 	}
 
@@ -185,24 +175,6 @@ public class NetworkSupport extends AbstractVLANSupport {
             capabilities = new GCENetworkCapabilities(provider);
         }
         return capabilities;
-    }
-
-	@Override
-    @Deprecated
-	public @Nonnull String getProviderTermForNetworkInterface(@Nonnull Locale locale) {
-		return "network interface";
-	}
-
-	@Override
-    @Deprecated
-	public @Nonnull String getProviderTermForVlan(@Nonnull Locale locale) {
-		return "network";
-	}
-
-    @Override
-    @Deprecated
-    public @Nonnull String getProviderTermForSubnet(@Nonnull Locale locale) {
-        return "";
     }
 
 	@Override
@@ -223,11 +195,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 	public @Nullable VLAN getVlan(@Nonnull String vlanId) throws CloudException, InternalException {
 		ProviderContext ctx = provider.getContext();
 
-		if( ctx == null ) {
-			throw new CloudException("No context was set for this request");
-		}
-
-        try{
+		try{
             Compute gce = provider.getGoogleCompute();
             Network network = gce.networks().get(ctx.getAccountNumber(), vlanId).execute();
             return toVlan(network, ctx);
@@ -239,7 +207,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 	            GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-				throw new CloudException(ex.getMessage());
+				throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
 		}
 	}
 
@@ -263,7 +231,7 @@ public class NetworkSupport extends AbstractVLANSupport {
         throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
     }
 
-    @Override
+	@Override
     public @Nullable String getAttachedInternetGatewayId(@Nonnull String vlanId) throws CloudException, InternalException{
         throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
     }
@@ -336,7 +304,12 @@ public class NetworkSupport extends AbstractVLANSupport {
 	}
 
 	@Override
-	public @Nonnull Iterable<RoutingTable> listRoutingTables(@Nonnull String inVlanId)throws CloudException, InternalException {
+	public @Nonnull Iterable<RoutingTable> listRoutingTablesForVlan(@Nonnull String inVlanId)throws CloudException, InternalException {
+		throw new OperationNotSupportedException("Routing tables and subnets not supported.");
+	}
+
+	@Override
+	public @Nonnull Iterable<RoutingTable> listRoutingTablesForSubnet(@Nonnull String inVlanId)throws CloudException, InternalException {
 		throw new OperationNotSupportedException("Routing tables and subnets not supported.");
 	}
 
@@ -363,7 +336,7 @@ public class NetworkSupport extends AbstractVLANSupport {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else
-                    throw new CloudException("An error occurred getting VLAN statuses");
+                    throw new GeneralCloudException("An error occurred getting VLAN statuses", ex, CloudErrorType.GENERAL);
     		}
         }
         finally {
@@ -375,11 +348,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 	public @Nonnull Iterable<VLAN> listVlans() throws CloudException, InternalException {
 		ProviderContext ctx = provider.getContext();
 
-		if( ctx == null ) {
-			throw new InternalException("No context was established");
-		}
-
-        ArrayList<VLAN> vlans = new ArrayList<VLAN>();
+		ArrayList<VLAN> vlans = new ArrayList<VLAN>();
         try{
             Compute gce = provider.getGoogleCompute();
             NetworkList networkList = gce.networks().list(ctx.getAccountNumber()).execute();
@@ -399,9 +368,9 @@ public class NetworkSupport extends AbstractVLANSupport {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else
-	            throw new CloudException("An error occurred while listing VLans: " + ex.getMessage());
+	            throw new GeneralCloudException("An error occurred while listing VLans: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 		} catch (Exception e) {
-		    throw new CloudException("An error occurred while listing VLans for " + ctx.getAccountNumber() + ": " + e.getMessage());
+		    throw new GeneralCloudException("An error occurred while listing VLans for " + ctx.getAccountNumber() + ": " + e.getMessage(), e, CloudErrorType.GENERAL);
 		}
         return vlans;
 	}
@@ -435,7 +404,7 @@ public class NetworkSupport extends AbstractVLANSupport {
                 op = gce.networks().delete(provider.getContext().getAccountNumber(), vlan.getName()).execute();
 
                 if(!method.getOperationComplete(provider.getContext(), op, GoogleOperationType.GLOBAL_OPERATION, "", "")){
-                    throw new CloudException("An error occurred while removing network: " + vlanId + ": Operation timed out");
+                    throw new GeneralCloudException("An error occurred while removing network: " + vlanId + ": Operation timed out", CloudErrorType.GENERAL);
                 }
     	    } catch (IOException ex) {
 	            logger.error(ex.getMessage());
@@ -443,7 +412,7 @@ public class NetworkSupport extends AbstractVLANSupport {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else
-                    throw new CloudException("An error occurred while removing network: " + vlanId + ": " + ex.getMessage());
+                    throw new GeneralCloudException("An error occurred while removing network: " + vlanId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
     		}
         }
         finally{

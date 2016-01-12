@@ -19,27 +19,22 @@
 
 package org.dasein.cloud.google.network;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.Firewall.Allowed;
+import com.google.api.services.compute.model.FirewallList;
+import com.google.api.services.compute.model.Network;
+import com.google.api.services.compute.model.NetworkList;
+import com.google.api.services.compute.model.Operation;
 import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
 import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.VisibleScope;
 import org.dasein.cloud.google.Google;
@@ -60,13 +55,18 @@ import org.dasein.cloud.network.RuleTargetType;
 import org.dasein.cloud.network.VLAN;
 import org.dasein.cloud.util.APITrace;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.Firewall.Allowed;
-import com.google.api.services.compute.model.FirewallList;
-import com.google.api.services.compute.model.Network;
-import com.google.api.services.compute.model.NetworkList;
-import com.google.api.services.compute.model.Operation;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 
 /**
  * Implements the firewall services supported in the Google API.
@@ -162,8 +162,11 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     ruleDiffers = false;
                 }
             }
-            if (ruleDiffers == false)
-                throw new CloudException("Duplicate rule already exists");
+            if (ruleDiffers == false) {
+                //todo this isn't a cloud fault but neither is it a dasein problem
+                // should we have a new exception for errors caused by user/client provided data?
+                throw new InternalException("Duplicate rule already exists");
+            }
 
                 try {
                     Operation job = gce.firewalls().insert(provider.getContext().getAccountNumber(), googleFirewall).execute();
@@ -175,7 +178,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                         GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                         throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                     } else
-                        throw new CloudException("An error occurred creating a new rule on " + firewallId + ": " + ex.getMessage());
+                        throw new GeneralCloudException("An error occurred creating a new rule on " + firewallId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
                 }
 
         } finally{
@@ -207,9 +210,6 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
         if (!firewallId.startsWith("fw-"))
             return null;
         ProviderContext ctx = provider.getContext();
-        if ( ctx == null ) {
-            throw new CloudException("No context has been established for this request");
-        }
 
         Compute gce = provider.getGoogleCompute();
         try {
@@ -220,7 +220,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 List<com.google.api.services.compute.model.Firewall> rules = firewallList.getItems();
                 return toFirewall(firewall, rules);
             } else {
-                throw new CloudException("Firewall Not Found.");
+                throw new ResourceNotFoundException("Firewall Not Found: "+firewall.getName());
             }
         } catch (IOException ex) {
             logger.error("An error occurred while getting firewall " + firewallId + ": " + ex.getMessage());
@@ -228,19 +228,15 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-               throw new CloudException(ex.getMessage());
+               throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
     @Override
     public @Nonnull Collection<FirewallRule> getRules(@Nonnull String firewallId) throws InternalException, CloudException {
         ProviderContext ctx = provider.getContext();
-        if ( ctx == null ) {
-            throw new CloudException("No context has been established for this request");
-        }
-
         if (null == ctx.getAccountNumber()) {
-            throw new CloudException("Context for this request lacks a account number");
+            throw new InternalException("Context for this request lacks an account number");
         }
 
         Compute gce = provider.getGoogleCompute();
@@ -258,7 +254,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException(ex.getMessage());
+                throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -271,9 +267,6 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
     public @Nonnull Collection<Firewall> list() throws InternalException, CloudException{
         //GCE has a defacto Firewall for every network so will simply map a fake firewall to networks.
         ProviderContext ctx = provider.getContext();
-        if ( ctx == null )
-            throw new InternalException("No context was established");
-
         ArrayList<Firewall> firewalls = new ArrayList<Firewall>();
         try {
             Compute gce = provider.getGoogleCompute();
@@ -309,7 +302,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException("An error occurred while listing Firewalls: " + ex.getMessage());
+                throw new GeneralCloudException("An error occurred while listing Firewalls: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         return firewalls;
     }
@@ -323,39 +316,6 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
             statuses.add(status);
         }
         return statuses;
-    }
-
-    @Override
-    @Deprecated
-    public @Nonnull Iterable<RuleTargetType> listSupportedDestinationTypes(boolean inVlan) throws InternalException, CloudException {
-        Collection<RuleTargetType> destinationTypes = new ArrayList<RuleTargetType>();
-        destinationTypes.add(RuleTargetType.VM);
-        return destinationTypes;
-    }
-
-    @Override
-    @Deprecated
-    public @Nonnull Iterable<Direction> listSupportedDirections(boolean inVlan) throws InternalException, CloudException {
-        Collection<Direction> directions = new ArrayList<Direction>();
-        directions.add(Direction.INGRESS);
-        return directions;
-    }
-
-    @Override
-    @Deprecated
-    public @Nonnull Iterable<Permission> listSupportedPermissions(boolean inVlan)throws InternalException, CloudException {
-        Collection<Permission> permissions = new ArrayList<Permission>();
-        permissions.add(Permission.ALLOW);
-        return permissions;
-    }
-
-    @Override
-    @Deprecated
-    public @Nonnull Iterable<RuleTargetType> listSupportedSourceTypes(boolean inVlan) throws InternalException, CloudException {
-        Collection<RuleTargetType> sourceTypes = new ArrayList<RuleTargetType>();
-        sourceTypes.add(RuleTargetType.CIDR);
-        sourceTypes.add(RuleTargetType.VM);
-        return sourceTypes;
     }
 
     @Override
@@ -379,13 +339,13 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     Operation job = gce.firewalls().update(provider.getContext().getAccountNumber(), firewall, fw).execute();
                     GoogleMethod method = new GoogleMethod(provider);
                     if (!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")) {
-                        throw new CloudException("An error occurred deleting the rule: Operation Timed Out");
+                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out", CloudErrorType.OPERATION_TIMED_OUT);
                     }
                 } else {
                     Operation job = gce.firewalls().delete(provider.getContext().getAccountNumber(), providerFirewallRuleId).execute();
                     GoogleMethod method = new GoogleMethod(provider);
                     if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")) {
-                        throw new CloudException("An error occurred deleting the rule: Operation Timed Out");
+                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out", CloudErrorType.OPERATION_TIMED_OUT);
                     }
                 }
             } catch (IOException ex) {
@@ -394,7 +354,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else
-                    throw new CloudException("An error occurred while deleting the firewall rule: " + ex.getMessage());
+                    throw new GeneralCloudException("An error occurred while deleting the firewall rule: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
              }
         }
         finally{
@@ -422,6 +382,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
         if (!permission.equals(Permission.ALLOW)) {
             throw new OperationNotSupportedException("GCE does not support deny firewall rules");
         }
+        //todo figure out why this method does nothing...
     }
 
     @Override
@@ -468,7 +429,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
             rule = current;
         }
         if (rule == null)
-            throw new InternalException("The rule for " + direction.name() + ", " + permission.name() + ", " + source + ", " + beginPort + "-" + endPort + " does not exist");
+            throw new ResourceNotFoundException("The rule for " + direction.name() + ", " + permission.name() + ", " + source + ", " + beginPort + "-" + endPort + " does not exist");
 
         revoke(rule.getProviderRuleId());
     }

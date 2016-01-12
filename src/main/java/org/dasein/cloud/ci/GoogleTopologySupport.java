@@ -1,28 +1,5 @@
 package org.dasein.cloud.ci;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-
-import org.dasein.cloud.CloudErrorType;
-import org.dasein.cloud.CloudException;
-import org.dasein.cloud.InternalException;
-import org.dasein.cloud.ci.Topology.VLANDevice;
-import org.dasein.cloud.ci.Topology.VMDevice;
-import org.dasein.cloud.ci.TopologyProvisionOptions.Disk;
-import org.dasein.cloud.ci.TopologyProvisionOptions.Network;
-import org.dasein.cloud.compute.Architecture;
-import org.dasein.cloud.compute.VirtualMachineProduct;
-import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.GoogleException;
-import org.dasein.cloud.google.GoogleMethod;
-import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.compute.server.ServerSupport;
-
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute.InstanceTemplates;
 import com.google.api.services.compute.model.AccessConfig;
@@ -37,8 +14,32 @@ import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.Tags;
+import org.apache.log4j.Logger;
+import org.dasein.cloud.CloudErrorType;
+import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
+import org.dasein.cloud.InternalException;
+import org.dasein.cloud.ci.Topology.VLANDevice;
+import org.dasein.cloud.ci.Topology.VMDevice;
+import org.dasein.cloud.ci.TopologyProvisionOptions.Disk;
+import org.dasein.cloud.ci.TopologyProvisionOptions.Network;
+import org.dasein.cloud.compute.Architecture;
+import org.dasein.cloud.compute.VirtualMachineProduct;
+import org.dasein.cloud.google.Google;
+import org.dasein.cloud.google.GoogleException;
+import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.compute.server.ServerSupport;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
+    static private final Logger logger = Google.getLogger(GoogleTopologySupport.class);
     private InstanceTemplates instanceTemplates = null;;
 
     public GoogleTopologySupport(Google provider) {
@@ -47,11 +48,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             instanceTemplates = getProvider().getGoogleCompute().instanceTemplates();
 
         } catch ( CloudException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error(e);
         } catch ( InternalException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 
@@ -105,8 +104,7 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
                 }
             }
         } catch ( IOException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new GeneralCloudException("Problem listing topologies", e, CloudErrorType.GENERAL);
         }
 
         return topologies;
@@ -218,7 +216,7 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException(ex.getMessage());
+                throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         return true;
     }
@@ -235,7 +233,7 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else
-                    throw new CloudException(ex.getMessage());
+                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
             }
         }
         return true;

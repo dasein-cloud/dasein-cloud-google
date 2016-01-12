@@ -68,7 +68,7 @@ public class GCEVolumeCapabilities extends AbstractCapabilities<Google> implemen
 
     @Override
     public @Nullable Storage<Gigabyte> getMaximumVolumeSize() throws InternalException, CloudException {
-        return new Storage<Gigabyte>(10000, Storage.GIGABYTE);
+        return new Storage<Gigabyte>(10240, Storage.GIGABYTE);
     }
 
     @Override

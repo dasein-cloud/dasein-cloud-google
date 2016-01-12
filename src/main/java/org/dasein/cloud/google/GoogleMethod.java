@@ -19,25 +19,23 @@
 
 package org.dasein.cloud.google;
 
-import java.io.IOException;
-
-import javax.annotation.Nonnull;
-
-import org.apache.log4j.Logger;
-import org.dasein.cloud.CloudErrorType;
-import org.dasein.cloud.CloudException;
-import org.dasein.cloud.InternalException;
-import org.dasein.cloud.ProviderContext;
-import org.dasein.util.CalendarWrapper;
-
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.replicapool.Replicapool;
 import com.google.api.services.replicapool.model.Operation.Error.Errors;
 import com.google.api.services.sqladmin.SQLAdmin;
 import com.google.api.services.sqladmin.model.OperationError;
+import org.apache.log4j.Logger;
+import org.dasein.cloud.CloudErrorType;
+import org.dasein.cloud.CloudException;
+import org.dasein.cloud.CommunicationException;
+import org.dasein.cloud.GeneralCloudException;
+import org.dasein.cloud.InternalException;
+import org.dasein.cloud.ProviderContext;
+import org.dasein.util.CalendarWrapper;
 
-import org.dasein.cloud.google.GoogleOperationType;
+import javax.annotation.Nonnull;
+import java.io.IOException;
 
 /**
  * Represents the interaction point between Dasein Cloud and the underlying REST API.
@@ -61,7 +59,7 @@ public class GoogleMethod {
         while(timeout > System.currentTimeMillis()) {
             if(job.getError() != null){
                 for(Operation.Error.Errors error : job.getError().getErrors()){
-                    throw new CloudException("An error occurred: " + error.getMessage());
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
                 }
             }
             else if(job.getStatus().equals("DONE")){
@@ -95,7 +93,7 @@ public class GoogleMethod {
                 logger.error(ex.getMessage());
             }
         }
-        throw new CloudException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
     }
 
     public @Nonnull boolean getOperationComplete(ProviderContext ctx, Operation job, GoogleOperationType operationType, String regionId, String dataCenterId)throws CloudException, InternalException{
@@ -103,7 +101,7 @@ public class GoogleMethod {
         while(timeout > System.currentTimeMillis()) {
             if(job.getError() != null){
                 for(Operation.Error.Errors error : job.getError().getErrors()){
-                    throw new CloudException("An error occurred: " + error.getMessage());
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
                 }
             }
             else if(job.getStatus().equals("DONE")){
@@ -136,7 +134,7 @@ public class GoogleMethod {
 
             }
         }
-        throw new CloudException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
     }
 
     /*
@@ -156,7 +154,7 @@ public class GoogleMethod {
 
             if (instanceOperation.getError() != null) {
                 for (OperationError error : instanceOperation.getError().getErrors()) {
-                    throw new CloudException("An error occurred: " + error.getCode() + " : " + error.getKind());
+                    throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind(), CloudErrorType.GENERAL);
                 }
             } else if (instanceOperation.getStatus().equals("DONE")) {
                 return;
@@ -166,15 +164,11 @@ public class GoogleMethod {
                 Thread.sleep(1000L);
             } catch (InterruptedException ignore) {}
         }
-        throw new CloudException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
     }
 
     public void getRDSOperationCompleteLong(ProviderContext ctx, String operation) throws CloudException, InternalException {
         SQLAdmin sqlAdmin = provider.getGoogleSQLAdmin();
-
-        if (null == ctx) {
-            throw new InternalException("ctx cannot be null");
-        }
 
         if (null == operation) {
             throw new InternalException("operation cannot be null");
@@ -192,7 +186,7 @@ public class GoogleMethod {
             if (null != instanceOperation) {
                 if (null != instanceOperation.getError()) {
                     for (OperationError error : instanceOperation.getError().getErrors()) {
-                        throw new CloudException("An error occurred: " + error.getCode() + " : " + error.getKind());
+                        throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind(), CloudErrorType.GENERAL);
                     }
                 } else if (instanceOperation.getStatus().equals("DONE")) {
                     return;
@@ -202,7 +196,7 @@ public class GoogleMethod {
                 Thread.sleep(30000L); // 30 seconds
             } catch (InterruptedException ignore) {}
         }
-        throw new CloudException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
     }
 
     public @Nonnull boolean getCIOperationComplete(ProviderContext ctx, com.google.api.services.replicapool.model.Operation job, GoogleOperationType operationType, String regionId, String dataCenterId) throws CloudException, InternalException {
@@ -224,7 +218,7 @@ public class GoogleMethod {
 
             if (job.getError() != null) {
                 for (Errors error : job.getError().getErrors()) {
-                    throw new CloudException("An error occurred: " + error.getMessage());
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
                 }
             }
             else if (job.getStatus().equals("DONE")) {
@@ -236,6 +230,6 @@ public class GoogleMethod {
             } catch (InterruptedException ignore) { }
 
         }
-        throw new CloudException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
     }
 }
