@@ -93,9 +93,10 @@ public class DataCenters implements DataCenterServices {
 				    return null;
 				}
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
-	            throw new GeneralCloudException("An error occurred retrieving the dataCenter: " + dataCenterId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-		}
+			} else {
+                throw new GeneralCloudException("An error occurred retrieving the dataCenter: " + dataCenterId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
+        }
 	}
 
 	@Override
@@ -112,9 +113,10 @@ public class DataCenters implements DataCenterServices {
                     return null;
                 }
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
-				throw new GeneralCloudException("An error occurred retrieving the region: " + providerRegionId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-		}
+			} else {
+                throw new GeneralCloudException("An error occurred retrieving the region: " + providerRegionId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
+        }
 	}
 
 	@Override
@@ -158,9 +160,10 @@ public class DataCenters implements DataCenterServices {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-    				throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceDataCenters.getLastStatusCode(), gceDataCenters.getLastStatusMessage(), "An error occurred while listing DataCenters");
-    		}
+    			} else {
+                    throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceDataCenters.getLastStatusCode(), gceDataCenters.getLastStatusMessage(), "An error occurred while listing DataCenters");
+                }
+            }
             if (cache != null) {
                 cache.put(ctx, dataCenters);
             }
@@ -201,9 +204,10 @@ public class DataCenters implements DataCenterServices {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-    				throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceRegions.getLastStatusCode(), gceRegions.getLastStatusMessage(), "An error occurred while listing regions");
-    		}
+    			} else {
+                    throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceRegions.getLastStatusCode(), gceRegions.getLastStatusMessage(), "An error occurred while listing regions");
+                }
+            }
             cache.put(ctx, regions);
             return regions;
 		}
@@ -213,7 +217,9 @@ public class DataCenters implements DataCenterServices {
 	}
 
     public @Nonnull String getRegionFromZone(@Nonnull String zoneName) throws CloudException, InternalException{
-        if(zoneName.contains("zones/"))zoneName = zoneName.replace("zones/", "");
+        if(zoneName.contains("zones/")) {
+            zoneName = zoneName.replace("zones/", "");
+        }
         if(zone2Region == null || !zone2Region.containsKey(zoneName)){
             for(Region r : listRegions()){
                 listDataCenters(r.getProviderRegionId());

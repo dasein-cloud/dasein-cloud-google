@@ -124,15 +124,16 @@ public class NetworkSupport extends AbstractVLANSupport {
 			if (ex.getClass() == GoogleJsonResponseException.class) {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
+			} else {
 				throw new GeneralCloudException("An error occurred while creating the route: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+			}
 		}
 	}
 
 	@Override
     public @Nonnull VLAN createVlan(@Nonnull String cidr, @Nonnull String name, @Nonnull String description, @Nonnull String domainName, @Nonnull String[] dnsServers, @Nonnull String[] ntpServers) throws CloudException, InternalException {
 		if(!getCapabilities().allowsNewVlanCreation()) {
-			throw new OperationNotSupportedException();
+			throw new OperationNotSupportedException("Creating vlans is not supported for Google");
 		}
 		ProviderContext ctx = provider.getContext();
 
@@ -163,8 +164,9 @@ public class NetworkSupport extends AbstractVLANSupport {
 			if (ex.getClass() == GoogleJsonResponseException.class) {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
+			} else {
 				throw new GeneralCloudException("An error occurred while creating vlan: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+			}
 		}
 	}
 
@@ -181,7 +183,9 @@ public class NetworkSupport extends AbstractVLANSupport {
 	public NetworkInterface getNetworkInterface(@Nonnull String nicId)throws CloudException, InternalException {
 		Iterable<NetworkInterface> nicList = listNetworkInterfaces();
 		for (NetworkInterface nic: nicList) {
-			if (nic.getName().equals(nicId)) return nic;
+			if (nic.getName().equals(nicId)) {
+				return nic;
+			}
 		}
 		return null;
 	}
@@ -200,14 +204,16 @@ public class NetworkSupport extends AbstractVLANSupport {
             Network network = gce.networks().get(ctx.getAccountNumber(), vlanId).execute();
             return toVlan(network, ctx);
 	    } catch (IOException ex) {
-	    	if ((ex.getMessage() != null) && (ex.getMessage().contains("404 Not Found")))  // vlan not found, its ok, return null.
-	    	    return null;
-	    	logger.error("An error occurred while getting network " + vlanId + ": " + ex.getMessage());
+	    	if ((ex.getMessage() != null) && (ex.getMessage().contains("404 Not Found"))) {// vlan not found, its ok, return null.
+				return null;
+			}
+			logger.error("An error occurred while getting network " + vlanId + ": " + ex.getMessage());
 			if (ex.getClass() == GoogleJsonResponseException.class) {
 	            GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
+			} else {
 				throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+			}
 		}
 	}
 
@@ -335,9 +341,10 @@ public class NetworkSupport extends AbstractVLANSupport {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new GeneralCloudException("An error occurred getting VLAN statuses", ex, CloudErrorType.GENERAL);
-    		}
+    			} else {
+					throw new GeneralCloudException("An error occurred getting VLAN statuses", ex, CloudErrorType.GENERAL);
+				}
+			}
         }
         finally {
             APITrace.end();
@@ -357,8 +364,9 @@ public class NetworkSupport extends AbstractVLANSupport {
                 if (networks != null) {
                     for (Network net : networks) {
                         VLAN vlan = toVlan(net, ctx);
-                        if(vlan != null)
-                            vlans.add(vlan);
+                        if(vlan != null) {
+							vlans.add(vlan);
+						}
                     }
                 }
             }
@@ -367,8 +375,9 @@ public class NetworkSupport extends AbstractVLANSupport {
 			if (ex.getClass() == GoogleJsonResponseException.class) {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
-	            throw new GeneralCloudException("An error occurred while listing VLans: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+			} else {
+				throw new GeneralCloudException("An error occurred while listing VLans: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+			}
 		} catch (Exception e) {
 		    throw new GeneralCloudException("An error occurred while listing VLans for " + ctx.getAccountNumber() + ": " + e.getMessage(), e, CloudErrorType.GENERAL);
 		}
@@ -411,9 +420,10 @@ public class NetworkSupport extends AbstractVLANSupport {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new GeneralCloudException("An error occurred while removing network: " + vlanId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+    			} else {
+					throw new GeneralCloudException("An error occurred while removing network: " + vlanId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+				}
+			}
         }
         finally{
             APITrace.end();

@@ -215,8 +215,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
+            } else {
                 throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
         return true;
     }
@@ -232,8 +233,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
                 if (ex.getClass() == GoogleJsonResponseException.class) {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-                } else
+                } else {
                     throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
             }
         }
         return true;

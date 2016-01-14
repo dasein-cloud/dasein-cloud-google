@@ -128,8 +128,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         if (e.getClass() == GoogleJsonResponseException.class) {
             GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
             throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-        } else
+        } else {
             throw new GeneralCloudException(message, e, CloudErrorType.GENERAL);
+        }
     }
 
     @Override
@@ -142,8 +143,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
     public void addAccess(String providerDatabaseId, String sourceCidr) throws CloudException, InternalException {
         if (sourceCidr.matches("[0-9][0-9./]*[0-9]")) {
             addAccessAuthorizedNetworks(providerDatabaseId, sourceCidr);
-        } else
+        } else {
             addAccessAuthorizedGaeApplications(providerDatabaseId, sourceCidr);
+        }
     }
 
     private void addAccessAuthorizedNetworks(String providerDatabaseId, String sourceCidr) throws CloudException, InternalException {
@@ -153,9 +155,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             DatabaseInstance instance = sqlAdmin.instances().get(ctx.getAccountNumber(), providerDatabaseId).execute();
             Settings settings = instance.getSettings();
             List<AclEntry> authorizedNetworks = settings.getIpConfiguration().getAuthorizedNetworks();
-            if (authorizedNetworks == null)
+            if (authorizedNetworks == null) {
                 authorizedNetworks = new ArrayList<AclEntry>();
-
+            }
             AclEntry acl = new AclEntry();
             acl.setValue(sourceCidr);
             authorizedNetworks.add(acl);
@@ -179,8 +181,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             if (instance != null) {
                 Settings settings = instance.getSettings();
                 List<String> authorizedApplications = settings.getAuthorizedGaeApplications();
-                if (authorizedApplications == null) 
+                if (authorizedApplications == null) {
                     authorizedApplications = new ArrayList<String>();
+                }
                 authorizedApplications.add(authorizedApplication);
                 settings.setAuthorizedGaeApplications(authorizedApplications);
                 instance.setSettings(settings);
@@ -202,8 +205,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             DatabaseInstance instance = sqlAdmin.instances().get(ctx.getAccountNumber(), providerDatabaseId).execute();
             Settings settings = instance.getSettings();
             List<AclEntry> authorizedNetworks = settings.getIpConfiguration().getAuthorizedNetworks();
-            if (authorizedNetworks == null)
+            if (authorizedNetworks == null) {
                 authorizedNetworks = new ArrayList<AclEntry>();
+            }
             else {
                 for (AclEntry net : authorizedNetworks) {
                     if (deauthedCidr.equals(net.getValue())) {
@@ -262,9 +266,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             handleGoogleException("Exception getting database for modification", e);
         }
 
-        if (null == databaseInstance) 
+        if (null == databaseInstance) {
             throw new ResourceNotFoundException("Database instance " + providerDatabaseId + " does not exist.");
-
+        }
         databaseInstance.setMaxDiskSize(storageInGigabytes * gigabyte);
 
         try {
@@ -305,8 +309,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
 
         try {
             Operation response = sqlAdmin.instances().update(ctx.getAccountNumber(), providerDatabaseId, databaseInstance).execute();
-            if (applyImmediately) 
+            if (applyImmediately) {
                 method.getRDSOperationComplete(ctx, response.getName());
+            }
         } catch (Exception e) {
             handleGoogleException("Exception updating database", e);
         }
@@ -450,9 +455,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         try {
             databaseInstance = sqlAdmin.instances().get(ctx.getAccountNumber(), providerDatabaseId).execute();
 
-            if (null == databaseInstance) 
+            if (null == databaseInstance) {
                 throw new ResourceNotFoundException("Database instance " + providerDatabaseId + " does not exist.");
-
+            }
             Settings settings = databaseInstance.getSettings();
             settings.setTier(newProductSize.toUpperCase());
             databaseInstance.setSettings(settings);
@@ -510,11 +515,15 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 return null;
             }
             Iterable<Database> dbs = listDatabases();
-            if (dbs != null)
-                for( Database database : dbs) 
-                    if (database != null)
-                        if( database.getProviderDatabaseId().equals(providerDatabaseId) ) 
+            if (dbs != null) {
+                for (Database database : dbs) {
+                    if ( database != null ) {
+                        if ( database.getProviderDatabaseId().equals(providerDatabaseId) ) {
                             return database;
+                        }
+                    }
+                }
+            }
 
             return null;
         } finally {
@@ -554,13 +563,15 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
 
     @Override
     public String getDefaultVersion(@Nonnull DatabaseEngine forEngine) throws CloudException, InternalException {
-        if (forEngine == null)
+        if (forEngine == null) {
             return null;
+        }
         APITrace.begin(provider, "RDBMS.getDefaultVersion");
         try {
             Iterable<String> versions = getSupportedVersions(forEngine);
-            for (String version : versions)
+            for (String version : versions) {
                 return version;  // just return first...
+            }
         }
         finally {
             APITrace.end();
@@ -577,8 +588,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             FlagsListResponse flags = sqlAdmin.flags().list().execute();
             for (Flag  flag : flags.getItems()) {
                 List<String> appliesTo = flag.getAppliesTo();
-                for (String dbNameVersion : appliesTo) 
+                for (String dbNameVersion : appliesTo) {
                     versions.put(dbNameVersion.toLowerCase().replaceFirst(forEngine.toString().toLowerCase() + "_", "").replaceAll("_", "."), true);
+                }
             }
         }
         catch (Exception e) {
@@ -598,13 +610,14 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             StringBuffer buffer = new StringBuffer();
             int read;
             char[] chars = new char[1024];
-            while ((read = reader.read(chars)) != -1)
-                buffer.append(chars, 0, read); 
-
+            while ((read = reader.read(chars)) != -1) {
+                buffer.append(chars, 0, read);
+            }
             return buffer.toString();
         } finally {
-            if (reader != null)
+            if (reader != null) {
                 reader.close();
+            }
         }
     }
 
@@ -616,22 +629,24 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         APITrace.begin(provider, "RDBMS.listDatabaseProducts");
 
         boolean found = false;
-        for (DatabaseEngine engine : supportedEngines)
-            if (forEngine.equals(engine)) {
+        for (DatabaseEngine engine : supportedEngines) {
+            if ( forEngine.equals(engine) ) {
                 found = true;
                 break;
             }
+        }
 
-        if (!found)
+        if (!found) {
             return products;
+        }
 
         ProviderContext ctx = provider.getContext();
         Collection<JSONObject> cachedJsonPriceList = (Collection<JSONObject>)jsonPriceList.get(ctx);
 
         JSONObject json = null;
-        if (cachedJsonPriceList != null)
+        if (cachedJsonPriceList != null) {
             json = cachedJsonPriceList.iterator().next();
-        else {
+        } else {
             String jsonString = null;
             try {
                 jsonString = readUrl(jsonPriceUrl);
@@ -671,22 +686,23 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                     String regionId = ctx.getRegionId();
                     price = new Float((Double) val.get("us"));
                     try {
-                        if (regionId.startsWith("europe"))
+                        if (regionId.startsWith("europe")) {
                             price = new Float((Double) val.get("eu"));
-                        else if (regionId.startsWith("asia"))
+                        } else if (regionId.startsWith("asia")) {
                             price = new Float((Double) val.get("apac"));
+                        }
                     } catch (JSONException e) {
                         // ignore and just use US price.
                     }
-                    if (components[2].equals("PERUSE"))
+                    if (components[2].equals("PERUSE")) {
                         hourly.put(components[3], price);
-                    else if (components[2].equals("PACKAGE"))
+                    } else if (components[2].equals("PACKAGE")) {
                         daily.put(components[3], price);
-                    else if (components[2].equals("IO"))
+                    } else if (components[2].equals("IO")) {
                         ioRate = price;         // CP-CLOUDSQL-IO - us = 0.1 per million I/O's
-                    else if (components[2].equals("STORAGE"))
+                    } else if (components[2].equals("STORAGE")) {
                         storageRate = price;    // CP-CLOUDSQL-STORAGE - us = 0.24 per month per GB
-                    //else if (components[2].equals("TRAFFIC"))
+                    } //else if (components[2].equals("TRAFFIC"))
                     //    trafficRate = price;    // CP-CLOUDSQL-TRAFFIC - us = 0.12 per GB (outbound only)
                 }
             }
@@ -701,9 +717,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
 
         Collection<Tier> tierList = (Collection<Tier>)tiersList.get(ctx);
         List<Tier> tiers = null;
-        if (tierList != null)
+        if (tierList != null) {
             tiers = (List<Tier>) tierList;
-        else {
+        } else {
             try {
                 TiersListResponse tierListResponse = sqlAdmin.tiers().list(ctx.getAccountNumber()).execute();  // 401 unauthorized. 7 min run time
                 tiers = tierListResponse.getItems();
@@ -839,8 +855,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             if (null == databaseInstances) {
                 try {
                     InstancesListResponse databases = sqlAdmin.instances().list(ctx.getAccountNumber()).execute();
-                    if (null != databases)
+                    if (null != databases) {
                         databaseInstances = databases.getItems();
+                    }
                     listDatabasesInstanceCache.put(ctx, databaseInstances);
                 } catch (Exception e) {
                     handleGoogleException("Exception listing databases", e);
@@ -852,8 +869,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 if (null != databaseInstances) {
                     for (DatabaseInstance d : databaseInstances) {
                         Settings s = d.getSettings();
-                        if (null == s)
+                        if (null == s) {
                             throw new GeneralCloudException("getSettings() returned null!", CloudErrorType.GENERAL);
+                        }
                         BackupConfiguration backupConfig = s.getBackupConfiguration();
 
                         Database database = new Database();
@@ -865,10 +883,11 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                         database.setConfiguration("unknown-1");
 
                         OperationsListResponse operations = sqlAdmin.operations().list(d.getProject(), d.getName()).execute(); // .getInstance()
-                        for (Operation operation: operations.getItems())
-                            if ((operation.getOperationType().equals("CREATE")) && (operation.getEndTime() != null))
+                        for (Operation operation: operations.getItems()) {
+                            if ( (operation.getOperationType().equals("CREATE")) && (operation.getEndTime() != null) ) {
                                 database.setCreationTimestamp(operation.getEndTime().getValue());
-
+                            }
+                        }
                         String googleDBState = d.getState();
                         if (googleDBState.equals("RUNNABLE")) {
                             database.setCurrentState(DatabaseState.AVAILABLE);
@@ -882,30 +901,30 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                             database.setCurrentState(DatabaseState.UNKNOWN);
                         }
 
-                        if ((d.getDatabaseVersion().equals("MYSQL_5_5")) || (d.getDatabaseVersion().equals("MYSQL_5_6")))
-                            database.setEngine(DatabaseEngine.MYSQL); 
-
+                        if ((d.getDatabaseVersion().equals("MYSQL_5_5")) || (d.getDatabaseVersion().equals("MYSQL_5_6"))) {
+                            database.setEngine(DatabaseEngine.MYSQL);
+                        }
                         database.setHighAvailability(true);  // GCE is always high availability
                         database.setHostPort(3306);          // Default mysql port
 
-                        if ((null != d) && (null != d.getIpAddresses()) && (null != d.getIpAddresses().get(0)))
+                        if ((null != d) && (null != d.getIpAddresses()) && (null != d.getIpAddresses().get(0))) {
                             database.setHostName(d.getIpAddresses().get(0).getIpAddress());
-
+                        }
                         if ((null != backupConfig) && (backupConfig.getStartTime() != null)) {  // Start time for the daily backup configuration in UTC timezone in the 24 hour format - HH:MM.
                             String[] backupWindowStartTimeComponents = backupConfig.getStartTime().split(":");
                             if ((null != backupWindowStartTimeComponents) 
                                 && (null != backupWindowStartTimeComponents[0]) 
                                 && (null != backupWindowStartTimeComponents[1])) {
-                                int startHour = Integer.parseInt(backupWindowStartTimeComponents[0]);
-                                TimeWindow backupTimeWindow = new TimeWindow();
-                                backupTimeWindow.setStartHour(startHour);
-                                backupTimeWindow.setStartMinute(Integer.parseInt(backupWindowStartTimeComponents[1]));
-                                backupTimeWindow.setEndHour((startHour + 4) % 24);
-                                backupTimeWindow.setEndMinute(Integer.parseInt(backupWindowStartTimeComponents[1]));
-                                backupTimeWindow.setStartDayOfWeek(DayOfWeek.MONDAY);
-                                backupTimeWindow.setEndDayOfWeek(DayOfWeek.SUNDAY);
-                                database.setBackupWindow(backupTimeWindow);
-                                database.setMaintenanceWindow(backupTimeWindow);    // I think the maintenance window is same as backup window.
+                                    int startHour = Integer.parseInt(backupWindowStartTimeComponents[0]);
+                                    TimeWindow backupTimeWindow = new TimeWindow();
+                                    backupTimeWindow.setStartHour(startHour);
+                                    backupTimeWindow.setStartMinute(Integer.parseInt(backupWindowStartTimeComponents[1]));
+                                    backupTimeWindow.setEndHour((startHour + 4) % 24);
+                                    backupTimeWindow.setEndMinute(Integer.parseInt(backupWindowStartTimeComponents[1]));
+                                    backupTimeWindow.setStartDayOfWeek(DayOfWeek.MONDAY);
+                                    backupTimeWindow.setEndDayOfWeek(DayOfWeek.SUNDAY);
+                                    database.setBackupWindow(backupTimeWindow);
+                                    database.setMaintenanceWindow(backupTimeWindow);    // I think the maintenance window is same as backup window.
                             }
                         }
 
@@ -921,7 +940,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                         if ((null != d) 
                             && (null != d.getSettings()) 
                             && (null != d.getSettings().getLocationPreference())) {
-                            database.setProviderDataCenterId(d.getSettings().getLocationPreference().getZone());
+                                database.setProviderDataCenterId(d.getSettings().getLocationPreference().getZone());
                         }
 
                         if (d.getDatabaseVersion().startsWith("MYSQL_")) {
@@ -972,8 +991,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 } else {
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 }
-            } else
+            } else {
                 throw new GeneralCloudException("Exception deleting database", e, CloudErrorType.GENERAL);
+            }
         } catch (Exception e) {
             throw new GeneralCloudException("Exception deleting database", e, CloudErrorType.GENERAL);
         }
@@ -1009,8 +1029,9 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
+            } else {
                 throw new GeneralCloudException("Exception restarting database", e, CloudErrorType.GENERAL);
+            }
         } catch (Exception e) {
             throw new GeneralCloudException("Exception restarting database", e, CloudErrorType.GENERAL);
         }
@@ -1056,21 +1077,24 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             throw new InternalException("Invalid beforeTimestamp passed to getUsableBackup");
         }
         Iterable<DatabaseBackup> backupList = listBackups(providerDbId);
-        for (DatabaseBackup backup : backupList) 
-            if (DatabaseBackupState.AVAILABLE == backup.getCurrentState()) {
+        for (DatabaseBackup backup : backupList) {
+            if ( DatabaseBackupState.AVAILABLE == backup.getCurrentState() ) {
                 try {
                     testStartTime = formatter.parse(backup.getStartTime());
-                    if ((testStartTime.before(beforeStartTime)) && 
-                        ((bestCandidateStartTime == null) || (testStartTime.after(bestCandidateStartTime)))){
+                    if ( (testStartTime.before(beforeStartTime)) &&
+                            ((bestCandidateStartTime == null) || (testStartTime.after(bestCandidateStartTime))) ) {
                         bestCandidateBackup = backup;
                         bestCandidateStartTime = testStartTime;
                     }
-                } catch ( ParseException e ) {}
+                } catch ( ParseException e ) {
+                }
             }
-        if (bestCandidateBackup != null)
+        }
+        if (bestCandidateBackup != null) {
             return bestCandidateBackup;
-        else
+        } else {
             throw new GeneralCloudException("No available backups meet requirements.", CloudErrorType.GENERAL);
+        }
     }
 
     @Override
@@ -1078,11 +1102,12 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         ArrayList<DatabaseBackup> backups = new ArrayList<DatabaseBackup>();
         if (forOptionalProviderDatabaseId == null) {
             Iterable<Database> dataBases = listDatabases();
-            for (Database db : dataBases) 
+            for (Database db : dataBases) {
                 backups.addAll(getBackupForDatabase(db.getProviderDatabaseId()));
-        } else 
+            }
+        } else {
             backups = getBackupForDatabase(forOptionalProviderDatabaseId);
-
+        }
         return backups;
     }
 
@@ -1111,7 +1136,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             handleGoogleException("Exception getting backup for database", e);
         }
         try {
-            if (null != backupRuns.getItems())
+            if (null != backupRuns.getItems()) {
                 for (BackupRun backupItem : backupRuns.getItems()) {
                     DatabaseBackup backup = new DatabaseBackup();
                     String instance = backupItem.getInstance();
@@ -1120,7 +1145,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                     backup.setAdminUser(db.getAdminUser());
                     backup.setProviderOwnerId(db.getProviderOwnerId());
                     String regionId = db.getProviderRegionId();
-                    if (regionId.equals("us-central")) {
+                    if ( regionId.equals("us-central") ) {
                         regionId = "us-central1"; // fix for google inconsistency 
                     }
                     backup.setProviderRegionId(regionId);
@@ -1129,21 +1154,21 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                     backup.setEnqueuedTime(backupItem.getEnqueuedTime().toString());
 
                     String status = backupItem.getStatus();
-                    if (status.equals("SUCCESSFUL")) {
+                    if ( status.equals("SUCCESSFUL") ) {
                         backup.setCurrentState(DatabaseBackupState.AVAILABLE);
                         backup.setStartTime(backupItem.getStartTime().toString());
                         backup.setEndTime(backupItem.getEndTime().toString());
                     } else {
-                        backup.setCurrentState(DatabaseBackupState.valueOf(status)); 
+                        backup.setCurrentState(DatabaseBackupState.valueOf(status));
                         // this will likely barf first time it gets caught mid backup, 
                         // but with backup windows being 4 hours... will have to wait to catch this one...
                     }
 
                     backup.setProviderBackupId(backupItem.getId().toString());
                     OperationError error = backupItem.getError(); // null
-                    if (error != null) 
+                    if ( error != null ) {
                         backup.setCurrentState(DatabaseBackupState.ERROR);
-
+                    }
                     // works like list, but for just one backup
                     //BackupRun unknownResult = sqlAdmin.backupRuns().get(ctx.getAccountNumber(), forDatabaseId, backupItem.getBackupConfiguration(), backupItem.getDueTime().toString()).execute();
                     //{"backupConfiguration":"4be91d6f-3ab7-4a21-b082-fad698a16cb0","dueTime":"2014-10-22T10:00:00.096Z","enqueuedTime":"2014-10-22T13:12:16.882Z","instance":"stateless-test-database","kind":"sql#backupRun","status":"SKIPPED"}
@@ -1158,6 +1183,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
 
                     backups.add(backup);
                 }
+            }
         } catch (Exception e) {
             handleGoogleException("Exception getting backup", e);
         }

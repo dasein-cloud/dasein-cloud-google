@@ -105,9 +105,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-    				throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -143,13 +144,15 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
             try{
                 Compute gce = getProvider().getGoogleCompute();
                 AddressAggregatedList addressList = gce.addresses().aggregatedList(getContext().getAccountNumber()).setFilter("name eq " + addressId).execute();
-                if(addressList != null && addressList.getItems() != null && !addressList.getItems().isEmpty())        {
+                if(addressList != null && addressList.getItems() != null && !addressList.getItems().isEmpty()) {
                     Iterator<String> regions = addressList.getItems().keySet().iterator();
                     while(regions.hasNext()){
                         String region = regions.next();
                         if(addressList.getItems() != null && addressList.getItems().get(region) != null && addressList.getItems().get(region).getAddresses() != null && !addressList.getItems().get(region).getAddresses().isEmpty()){
                             for(Address address : addressList.getItems().get(region).getAddresses()){
-                                if(address.getName().equals(addressId))return toIpAddress(address);
+                                if(address.getName().equals(addressId)) {
+                                    return toIpAddress(address);
+                                }
                             }
                         }
                     }
@@ -159,9 +162,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
+    			} else {
                     throw new GeneralCloudException("An error occurred getting the IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+                }
+            }
             throw new ResourceNotFoundException("Could not find IPAddress: " + addressId);
         }
         finally {
@@ -176,7 +180,9 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
             AddressList addressList = gce.addresses().list(getContext().getAccountNumber(), regionId).execute();
             if(addressList != null && addressList.getItems() != null && !addressList.getItems().isEmpty()){
                 for(Address address : addressList.getItems()){
-                    if(ipAddress.equals(address.getAddress()))return address.getName();
+                    if(ipAddress.equals(address.getAddress())) {
+                        return address.getName();
+                    }
                 }
             }
             throw new ResourceNotFoundException("An address could not be found matching " + ipAddress + " in " + regionId);
@@ -185,9 +191,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
 			if (ex.getClass() == GoogleJsonResponseException.class) {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
-				throw new GeneralCloudException("An error occurred finding the specified IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-		}
+			} else {
+                throw new GeneralCloudException("An error occurred finding the specified IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
+        }
     }
 
     @Override
@@ -210,7 +217,9 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
                 if(addressList != null && addressList.getItems() != null && !addressList.getItems().isEmpty()){
                     for(Address address : addressList.getItems()){
                         IpAddress ipAddress = toIpAddress(address);
-                        if(ipAddress != null)addresses.add(ipAddress);
+                        if(ipAddress != null) {
+                            addresses.add(ipAddress);
+                        }
                     }
                 }
                 return addresses;
@@ -219,9 +228,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
+    			} else {
                     throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -262,9 +272,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
+    			} else {
                     throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -295,9 +306,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
+    			} else {
                     throw new GeneralCloudException("An error occurred releasing address: " + addressId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		}
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -338,9 +350,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
+    			} else {
                     throw new GeneralCloudException("An error occurred releasing the address from the server: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    		} catch (Exception ex) {
+                }
+            } catch (Exception ex) {
     		    logger.error(ex.getMessage());
     		}
         }
@@ -369,9 +382,10 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         			if (ex.getClass() == GoogleJsonResponseException.class) {
         				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
         				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-        			} else
+        			} else {
                         throw new GeneralCloudException("An error occurred requesting an IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-        		}
+                    }
+                }
             }
             else {
                 throw new OperationNotSupportedException("GCE currently only supports IPv4");

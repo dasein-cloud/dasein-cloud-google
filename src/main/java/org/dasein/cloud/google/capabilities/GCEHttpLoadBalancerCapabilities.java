@@ -19,15 +19,15 @@
 
 package org.dasein.cloud.google.capabilities;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
 import org.dasein.cloud.AbstractCapabilities;
 import org.dasein.cloud.ci.HttpLoadBalancerCapabilities;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.util.NamingConstraints;
+
+import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Locale;
 
 public class GCEHttpLoadBalancerCapabilities extends AbstractCapabilities<Google> implements HttpLoadBalancerCapabilities {
 
@@ -124,6 +124,4 @@ public class GCEHttpLoadBalancerCapabilities extends AbstractCapabilities<Google
                 .withLastCharacterSymbolAllowed(false)
                 .constrainedBy('-');
     }
-
-
 }

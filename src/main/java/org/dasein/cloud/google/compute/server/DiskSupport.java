@@ -113,9 +113,10 @@ public class DiskSupport extends AbstractVolumeSupport {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-			} catch (Exception ex) {
+				} else {
+                    throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            } catch (Exception ex) {
 			    throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
 			}
         }
@@ -130,9 +131,9 @@ public class DiskSupport extends AbstractVolumeSupport {
         try{
             Compute gce = provider.getGoogleCompute();
 
-            if (options.getFormat() == VolumeFormat.NFS)
+            if (options.getFormat() == VolumeFormat.NFS) {
                 throw new OperationNotSupportedException("NFS volumes not supported by GCE");
-
+            }
             try{
                 Disk disk = new Disk();
                 disk.setName(getCapabilities().getVolumeNamingConstraints().convertToValidName(options.getName(), Locale.US));
@@ -152,9 +153,10 @@ public class DiskSupport extends AbstractVolumeSupport {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException("An error occurred while creating the Volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-			}
+				} else {
+                    throw new GeneralCloudException("An error occurred while creating the Volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally{
             APITrace.end();
@@ -183,9 +185,10 @@ public class DiskSupport extends AbstractVolumeSupport {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException("An error occurred while detaching the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-			} catch (Exception ex) {
+				} else {
+                    throw new GeneralCloudException("An error occurred while detaching the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            } catch (Exception ex) {
 			    throw new GeneralCloudException("An error occurred while detaching the volume", ex, CloudErrorType.GENERAL);
 			}
         }
@@ -215,7 +218,9 @@ public class DiskSupport extends AbstractVolumeSupport {
                     String zone = zones.next();
                     if(diskList.getItems().get(zone) != null && diskList.getItems().get(zone).getDisks() != null){
                         for(Disk disk : diskList.getItems().get(zone).getDisks()){
-                            if(disk.getName().equals(volumeId))return toVolume(disk);
+                            if(disk.getName().equals(volumeId)) {
+                                return toVolume(disk);
+                            }
                         }
                     }
                 }
@@ -225,9 +230,10 @@ public class DiskSupport extends AbstractVolumeSupport {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException("An error occurred getting the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-			}
+				} else {
+                    throw new GeneralCloudException("An error occurred getting the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -284,9 +290,10 @@ public class DiskSupport extends AbstractVolumeSupport {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-	                throw new GeneralCloudException("An error occurred listing Volumes: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-			}
+				} else {
+                    throw new GeneralCloudException("An error occurred listing Volumes: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally{
             APITrace.end();
@@ -316,9 +323,10 @@ public class DiskSupport extends AbstractVolumeSupport {
     				if (ex.getClass() == GoogleJsonResponseException.class) {
     					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    				} else
-    					throw new GeneralCloudException("An error occurred while deleting the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-    			}
+    				} else {
+                        throw new GeneralCloudException("An error occurred while deleting the volume: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    }
+                }
             }
         }
         finally {
@@ -331,8 +339,12 @@ public class DiskSupport extends AbstractVolumeSupport {
         volume.setProviderVolumeId(disk.getName());
         volume.setName(disk.getName());
         volume.setMediaLink(disk.getSelfLink());
-        if(disk.getDescription() == null)volume.setDescription(disk.getName());
-        else volume.setDescription(disk.getDescription());
+        if(disk.getDescription() == null) {
+            volume.setDescription(disk.getName());
+        }
+        else {
+            volume.setDescription(disk.getDescription());
+        }
         volume.setProviderRegionId(provider.getDataCenterServices().getRegionFromZone(disk.getZone().substring(disk.getZone().lastIndexOf("/") + 1)));
 
         DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
@@ -349,7 +361,9 @@ public class DiskSupport extends AbstractVolumeSupport {
         volume.setType(VolumeType.HDD);
         volume.setFormat(VolumeFormat.BLOCK);
         volume.setSize(new Storage<Gigabyte>(disk.getSizeGb(), Storage.GIGABYTE));
-        if(disk.getSourceSnapshotId() != null && !disk.getSourceSnapshotId().equals(""))volume.setProviderSnapshotId(disk.getSourceSnapshotId());
+        if(disk.getSourceSnapshotId() != null && !disk.getSourceSnapshotId().equals("")) {
+            volume.setProviderSnapshotId(disk.getSourceSnapshotId());
+        }
         volume.setTag("contentLink", disk.getSelfLink());
 
         //In order to list volumes with the attached VM, VMs must be listed. Doing it for now but, ick!

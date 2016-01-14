@@ -63,8 +63,12 @@ public class GoogleMethod {
                 }
             }
             else if(job.getStatus().equals("DONE")){
-                if(getLink) return job.getTargetLink();
-                else return job.getTargetLink().substring(job.getTargetLink().lastIndexOf("/") + 1);
+                if(getLink) {
+                    return job.getTargetLink();
+                }
+                else {
+                    return job.getTargetLink().substring(job.getTargetLink().lastIndexOf("/") + 1);
+                }
             }
 
             try{

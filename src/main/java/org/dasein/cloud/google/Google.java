@@ -217,17 +217,19 @@ public class Google extends AbstractCloud {
         String proxyHost = null;
 
         List<ContextRequirements.Field> fields = getContextRequirements().getConfigurableValues();
-        for(ContextRequirements.Field f : fields )
-            if ((f.compatName == null) && (f.name.equals("proxyHost")))
+        for(ContextRequirements.Field f : fields ) {
+            if ( (f.compatName == null) && (f.name.equals("proxyHost")) ) {
                 proxyHost = getProxyHost();
-            else if ((f.compatName == null) && (f.name.equals("proxyPort")))
+            } else if ( (f.compatName == null) && (f.name.equals("proxyPort")) ) {
                 proxyPort = getProxyPort();
-
+            }
+        }
         if ( proxyHost != null && proxyHost.length() > 0 && proxyPort > 0 ) {
             Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
             transport = new NetHttpTransport.Builder().setProxy(proxy).build();
-        } else
+        } else {
             transport = new NetHttpTransport();
+        }
         return transport;
     }
 
@@ -244,11 +246,12 @@ public class Google extends AbstractCloud {
                     byte[][] keyPair = (byte[][])getContext().getConfigurationValue(f);
                     p12Bytes = keyPair[0];
                     p12Password = new String(keyPair[1], "utf-8");
-                } else if(f.compatName != null && f.compatName.equals(ContextRequirements.Field.ACCESS_KEYS))
-                    serviceAccountId = (String)getContext().getConfigurationValue(f);
+                } else if(f.compatName != null && f.compatName.equals(ContextRequirements.Field.ACCESS_KEYS)) {
+                    serviceAccountId = (String) getContext().getConfigurationValue(f);
+                }
             }
         } catch(Exception ex) {
-                throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -379,9 +382,9 @@ public class Google extends AbstractCloud {
 
     @Override
     public @Nullable String testContext() {
-        if (logger.isTraceEnabled())
+        if (logger.isTraceEnabled()) {
             logger.trace("ENTER - " + Google.class.getName() + ".testContext()");
-
+        }
         NetHttpTransport httpTransport2 = new NetHttpTransport();
 
         JacksonFactory jsonFactory2 = new JacksonFactory();
@@ -402,8 +405,9 @@ public class Google extends AbstractCloud {
                 return null;
             }
         } finally {
-            if (logger.isTraceEnabled())
+            if (logger.isTraceEnabled()) {
                 logger.trace("EXIT - " + Google.class.getName() + ".textContext()");
+            }
         }
     }
 
