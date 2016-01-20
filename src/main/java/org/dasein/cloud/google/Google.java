@@ -33,7 +33,6 @@ import com.google.api.services.storage.Storage;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.AbstractCloud;
 import org.dasein.cloud.AuthenticationException;
-import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
 import org.dasein.cloud.InternalException;
@@ -251,7 +250,7 @@ public class Google extends AbstractCloud {
                 }
             }
         } catch(Exception ex) {
-            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -285,7 +284,7 @@ public class Google extends AbstractCloud {
                 computeCache.put(ctx, googleCompute);
             }
         } catch(Exception ex) {
-            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
@@ -312,7 +311,7 @@ public class Google extends AbstractCloud {
                 storageCache.put(ctx, googleDrive);
             }
         } catch(Exception ex) {
-            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
@@ -339,7 +338,7 @@ public class Google extends AbstractCloud {
                 sqlCache.put(ctx, googleSql);
             }
         } catch (Exception ex){
-            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedSqlCredential.iterator().next());
@@ -371,7 +370,7 @@ public class Google extends AbstractCloud {
                 replicapoolCache.put(ctx, replicaPool);
             }
         } catch (Exception ex){
-            throw new AuthenticationException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());

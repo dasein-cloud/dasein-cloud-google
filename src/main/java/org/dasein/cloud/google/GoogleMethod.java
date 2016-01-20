@@ -97,7 +97,7 @@ public class GoogleMethod {
                 logger.error(ex.getMessage());
             }
         }
-        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(408, "", "System timed out waiting for Operation to complete");
     }
 
     public @Nonnull boolean getOperationComplete(ProviderContext ctx, Operation job, GoogleOperationType operationType, String regionId, String dataCenterId)throws CloudException, InternalException{
@@ -138,7 +138,7 @@ public class GoogleMethod {
 
             }
         }
-        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(408, "", "System timed out waiting for Operation to complete");
     }
 
     /*
@@ -168,7 +168,7 @@ public class GoogleMethod {
                 Thread.sleep(1000L);
             } catch (InterruptedException ignore) {}
         }
-        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(408, "", "System timed out waiting for Operation to complete");
     }
 
     public void getRDSOperationCompleteLong(ProviderContext ctx, String operation) throws CloudException, InternalException {
@@ -200,7 +200,7 @@ public class GoogleMethod {
                 Thread.sleep(30000L); // 30 seconds
             } catch (InterruptedException ignore) {}
         }
-        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(408, "", "System timed out waiting for Operation to complete");
     }
 
     public @Nonnull boolean getCIOperationComplete(ProviderContext ctx, com.google.api.services.replicapool.model.Operation job, GoogleOperationType operationType, String regionId, String dataCenterId) throws CloudException, InternalException {
@@ -234,6 +234,6 @@ public class GoogleMethod {
             } catch (InterruptedException ignore) { }
 
         }
-        throw new CommunicationException(CloudErrorType.COMMUNICATION, 408, "", "System timed out waiting for Operation to complete");
+        throw new CommunicationException(408, "", "System timed out waiting for Operation to complete");
     }
 }
