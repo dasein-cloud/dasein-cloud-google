@@ -590,9 +590,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             if( bucket == null ) {
                 logger.error("No bucket was specified for this request");
-                //todo this is not a cloud error but neither is the issue in dasein
-                // should we have a new type of exception to highlight user/client data errors
-                throw new InternalException("No bucket was specified for this request");
+                throw new OperationNotSupportedException("Root objects not supported in Google Storage");
             }
             if( !exists(bucket) ) {
                 createBucket(bucket, false);

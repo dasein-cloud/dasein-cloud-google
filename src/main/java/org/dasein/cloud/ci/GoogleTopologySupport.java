@@ -131,9 +131,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             AttachedDiskInitializeParams attachedDiskInitializeParams = new AttachedDiskInitializeParams();
             attachedDiskInitializeParams.setSourceImage(topologyDisk.getDeviceSource());
             if (topologyDisk.getDeviceType() == TopologyProvisionOptions.DiskType.SSD_PERSISTENT_DISK) {
-                attachedDiskInitializeParams.setDiskType("SSD_PERSISTENT_DISK");
+                attachedDiskInitializeParams.setDiskType("pd-ssd");
             } else {
-                attachedDiskInitializeParams.setDiskType("STANDARD_PERSISTENT_DISK");
+                attachedDiskInitializeParams.setDiskType("pd-standard");
             }
                 
             disk.setInitializeParams(attachedDiskInitializeParams);

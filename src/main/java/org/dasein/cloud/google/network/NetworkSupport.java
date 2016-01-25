@@ -45,12 +45,8 @@ import org.dasein.cloud.network.AbstractVLANSupport;
 import org.dasein.cloud.network.FirewallRule;
 import org.dasein.cloud.network.IPVersion;
 import org.dasein.cloud.network.InternetGateway;
-import org.dasein.cloud.network.IpAddress;
-import org.dasein.cloud.network.NetworkInterface;
-import org.dasein.cloud.network.Networkable;
 import org.dasein.cloud.network.Route;
 import org.dasein.cloud.network.RoutingTable;
-import org.dasein.cloud.network.Subnet;
 import org.dasein.cloud.network.VLAN;
 import org.dasein.cloud.network.VLANState;
 import org.dasein.cloud.util.APITrace;
@@ -180,17 +176,6 @@ public class NetworkSupport extends AbstractVLANSupport {
     }
 
 	@Override
-	public NetworkInterface getNetworkInterface(@Nonnull String nicId)throws CloudException, InternalException {
-		Iterable<NetworkInterface> nicList = listNetworkInterfaces();
-		for (NetworkInterface nic: nicList) {
-			if (nic.getName().equals(nicId)) {
-				return nic;
-			}
-		}
-		return null;
-	}
-
-	@Override
 	public RoutingTable getRoutingTableForVlan(@Nonnull String vlanId)throws CloudException, InternalException {
 		throw new OperationNotSupportedException("Routing tables not supported.");
 	}
@@ -228,11 +213,6 @@ public class NetworkSupport extends AbstractVLANSupport {
 	}
 
     @Override
-    public @Nonnull Collection<InternetGateway> listInternetGateways(@Nullable String vlanId) throws CloudException, InternalException{
-        throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
-    }
-
-    @Override
     public InternetGateway getInternetGatewayById(@Nonnull String gatewayId) throws CloudException, InternalException{
         throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
     }
@@ -246,83 +226,6 @@ public class NetworkSupport extends AbstractVLANSupport {
     public void removeInternetGatewayById(@Nonnull String id) throws CloudException, InternalException{
         throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
     }
-
-	@Override
-	public @Nonnull Iterable<ResourceStatus> listNetworkInterfaceStatus() throws CloudException, InternalException {
-		Iterable<NetworkInterface> nicList = listNetworkInterfaces();
-		List<ResourceStatus> status = new ArrayList<ResourceStatus>();
-		for (NetworkInterface nic: nicList) {
-			status.add(new ResourceStatus(nic.getName(), nic.getCurrentState()));
-		}
-		return status;
-	}
-
-	@Override
-	public @Nonnull Iterable<NetworkInterface> listNetworkInterfaces() throws CloudException, InternalException {
-        throw new OperationNotSupportedException("Not currently implemented for " + provider.getCloudName());
-	}
-
-	@Override
-	public @Nonnull Iterable<NetworkInterface> listNetworkInterfacesForVM(@Nonnull String forVmId) throws CloudException, InternalException {
-		Iterable<NetworkInterface> nics = listNetworkInterfaces();
-		List<NetworkInterface> vmNics = new ArrayList<NetworkInterface>();
-		for (NetworkInterface nic: nics) {
-			if (nic.getProviderVirtualMachineId().equals(forVmId)) {
-				vmNics.add(nic);
-			}
-		}
-		return vmNics;
-	}
-
-	@Override
-	public @Nonnull Iterable<NetworkInterface> listNetworkInterfacesInSubnet(@Nonnull String subnetId) throws CloudException, InternalException {
-		throw new OperationNotSupportedException("Subnets are not supported by GCE.");
-	}
-
-	@Override
-	public @Nonnull Iterable<NetworkInterface> listNetworkInterfacesInVLAN(@Nonnull String vlanId) throws CloudException, InternalException {
-		Iterable<NetworkInterface> nics = listNetworkInterfaces();
-		List<NetworkInterface> vlanNics = new ArrayList<NetworkInterface>();
-		for (NetworkInterface nic: nics) {
-			if (nic.getProviderVlanId().equals(vlanId)) {
-				vlanNics.add(nic);
-			}
-		}
-		return vlanNics;
-	}
-
-	@Override
-	public @Nonnull Iterable<Networkable> listResources(@Nonnull String inVlanId)throws CloudException, InternalException {
-		Collection<Networkable> resources = new ArrayList<Networkable>();
-		Iterable<NetworkInterface> nics = listNetworkInterfacesInVLAN(inVlanId);
-		for (NetworkInterface nic: nics) {
-			IpAddress ip = new IpAddress();
-			ip.setVersion(IPVersion.IPV4);
-			ip.setProviderNetworkInterfaceId(nic.getProviderNetworkInterfaceId());
-			ip.setRegionId(nic.getProviderRegionId());
-			ip.setServerId(nic.getProviderVirtualMachineId());
-			ip.setProviderVlanId(nic.getProviderVlanId());
-			resources.add(ip);
-		}
-
-		return resources;
-
-	}
-
-	@Override
-	public @Nonnull Iterable<RoutingTable> listRoutingTablesForVlan(@Nonnull String inVlanId)throws CloudException, InternalException {
-		throw new OperationNotSupportedException("Routing tables and subnets not supported.");
-	}
-
-	@Override
-	public @Nonnull Iterable<RoutingTable> listRoutingTablesForSubnet(@Nonnull String inVlanId)throws CloudException, InternalException {
-		throw new OperationNotSupportedException("Routing tables and subnets not supported.");
-	}
-
-	@Override
-	public @Nonnull Iterable<Subnet> listSubnets(@Nonnull String inVlanId) throws CloudException, InternalException {
-		throw new OperationNotSupportedException("Subnets not supported.");
-	}
 
 	@Override
 	public @Nonnull Iterable<ResourceStatus> listVlanStatus() throws CloudException, InternalException {

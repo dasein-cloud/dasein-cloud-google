@@ -1,11 +1,6 @@
 package org.dasein.cloud.google.capabilities;
 
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-
 import org.dasein.cloud.AbstractCapabilities;
-import org.dasein.cloud.Cloud;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.google.Google;
@@ -14,6 +9,9 @@ import org.dasein.cloud.util.NamingConstraints;
 import org.dasein.util.uom.storage.Byte;
 import org.dasein.util.uom.storage.Gigabyte;
 import org.dasein.util.uom.storage.Storage;
+
+import javax.annotation.Nonnull;
+import java.util.Locale;
 
 public class GCEBlobStoreCapabilities extends AbstractCapabilities<Google> implements BlobStoreCapabilities {
     private Google cloud;
@@ -35,7 +33,7 @@ public class GCEBlobStoreCapabilities extends AbstractCapabilities<Google> imple
 
     @Override
     public boolean allowsNestedBuckets() throws CloudException, InternalException {
-        return true;
+        return false;
     }
 
     @Override

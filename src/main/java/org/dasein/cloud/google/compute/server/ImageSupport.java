@@ -150,15 +150,17 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                 String[] parts = providerImageId.split("_");
                 image = gce.images().get(parts[0], parts[1]).execute();
             } catch (IOException ex) {
-                if (ex.getMessage().contains("was not found")) // could use 404, but in theory 404 could appear in a image name.
+                if (ex.getMessage().contains("was not found")) {// could use 404, but in theory 404 could appear in a image name.
                     return null;
+                }
 				logger.error("An error occurred while getting image: " + providerImageId + ": " + ex.getMessage());
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
-			}
+				} else {
+                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
             return toMachineImage(image);
         }
         finally {
@@ -192,11 +194,12 @@ public class ImageSupport extends AbstractImageSupport<Google> {
             try{
                 Compute gce = provider.getGoogleCompute();
                 ImageList imgList = gce.images().list(provider.getContext().getAccountNumber()).execute();
-                //TODO: Add filter options
                 if(imgList.getItems() != null){
                     for(Image img : imgList.getItems()){
                         MachineImage image = toMachineImage(img);
-                        if(image != null)images.add(image);
+                        if(image != null && options.matches(image)) {
+                            images.add(image);
+                        }
                     }
                 }
 		    } catch (IOException ex) {
@@ -204,9 +207,10 @@ public class ImageSupport extends AbstractImageSupport<Google> {
 				if (ex.getClass() == GoogleJsonResponseException.class) {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-				} else
-					throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
-			}
+				} else {
+                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
             return images;
         }
         finally {
@@ -246,7 +250,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
         try{
             MachineImage image = getImage(providerImageId);
             if ((null == image) || (null == image.getCurrentState())) {
-                throw new ResourceNotFoundException("Image " + providerImageId + " does not exist.");
+                throw new ResourceNotFoundException("Image", providerImageId);
             }
             if (image.getCurrentState().equals(MachineImageState.ACTIVE)) {
                 job = gce.images().delete(provider.getContext().getAccountNumber(), image.getName()).execute();
@@ -264,24 +268,10 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                 }
 
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-			} else
-				throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
-		}
-	}
-
-	@Override
-	public void removeAllImageShares(@Nonnull String providerImageId) throws CloudException, InternalException {
-		throw new OperationNotSupportedException("Image sharing is not supported in GCE");
-	}
-
-	@Override
-	public void removeImageShare(@Nonnull String providerImageId, @Nonnull String accountNumber) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("Image sharing is not supported in GCE");
-	}
-
-	@Override
-	public void removePublicShare(@Nonnull String providerImageId) throws CloudException, InternalException {
-        throw new OperationNotSupportedException("Image sharing is not supported in GCE");
+			} else {
+                throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
+        }
 	}
 
 	@Override
@@ -391,9 +381,11 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                         for (Image img : imgList.getItems()) {
                             MachineImage image = toMachineImage(img);
 
-                            if (image != null) 
-                                if ((options.getRegex() == null) || (imageMatches(image, pattern, options.getRegex())))
+                            if (image != null) {
+                                if ( (options.getRegex() == null) || (imageMatches(image, pattern, options.getRegex())) ) {
                                     images.add(image);
+                                }
+                            }
                         }
                     }
                 } else {
@@ -405,8 +397,9 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                                     MachineImage image = toMachineImage(img);
 
                                     if (image != null) {
-                                        if ((options.getRegex() == null) || (imageMatches(image, pattern, options.getRegex())))
+                                        if ((options.getRegex() == null) || (imageMatches(image, pattern, options.getRegex()))) {
                                             images.add(image);
+                                        }
                                     }
                                 }
                             }
@@ -453,9 +446,15 @@ public class ImageSupport extends AbstractImageSupport<Google> {
 
         String imageStatus = img.getStatus();
         MachineImageState state = null;
-        if(imageStatus.equalsIgnoreCase("READY"))state = MachineImageState.ACTIVE;
-        else if(imageStatus.equalsIgnoreCase("PENDING"))state = MachineImageState.PENDING;
-        else return null;//TODO: This might not be appropriate - the final state is FAILED
+        if(imageStatus.equalsIgnoreCase("READY")) {
+            state = MachineImageState.ACTIVE;
+        }
+        else if(imageStatus.equalsIgnoreCase("PENDING")) {
+            state = MachineImageState.PENDING;
+        }
+        else {
+            return null;//TODO: This might not be appropriate - the final state is FAILED
+        }
 
         Architecture arch = Architecture.I64;
         Platform platform = Platform.guess(img.getName());
@@ -472,13 +471,15 @@ public class ImageSupport extends AbstractImageSupport<Google> {
         }
 
         String owner = provider.getCloudName();
-        if(project.equals(provider.getContext().getAccountNumber()))owner = provider.getContext().getAccountNumber();
+        if(project.equals(provider.getContext().getAccountNumber())) {
+            owner = provider.getContext().getAccountNumber();
+        }
         String description = null;
-        if (img.getDescription() != null)
+        if (img.getDescription() != null) {
             description = img.getDescription();
-        else
+        } else {
             description = "Image Name: " + img.getName(); //description = "Created from " + img.getSourceDisk();
-
+        }
         MachineImage image = MachineImage.getImageInstance(owner, "", project + "_" + img.getName(), ImageClass.MACHINE, state, img.getName(), description, arch, platform, MachineImageFormat.RAW, VisibleScope.ACCOUNT_GLOBAL);
         if (owner.equals("GCE")) {
             image = image.sharedWithPublic();
@@ -555,10 +556,17 @@ public class ImageSupport extends AbstractImageSupport<Google> {
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
+            } else {
                 throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
 
         return getImage(provider.getContext().getAccountNumber() + "_" + options.getName());
+    }
+
+    @Override
+    public boolean isImageSharedWithPublic(@Nonnull String providerImageId) throws CloudException, InternalException {
+        MachineImage img = getImage(providerImageId);
+        return img.isPublic();
     }
 }
