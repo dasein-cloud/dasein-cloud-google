@@ -46,7 +46,6 @@ import org.dasein.cloud.network.AbstractIpAddressSupport;
 import org.dasein.cloud.network.AddressType;
 import org.dasein.cloud.network.IPVersion;
 import org.dasein.cloud.network.IpAddress;
-import org.dasein.cloud.network.IpForwardingRule;
 import org.dasein.cloud.network.Protocol;
 import org.dasein.cloud.util.APITrace;
 
@@ -166,7 +165,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
                     throw new GeneralCloudException("An error occurred getting the IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
                 }
             }
-            throw new ResourceNotFoundException("Could not find IPAddress: " + addressId);
+            return null;
         }
         finally {
             APITrace.end();
@@ -185,7 +184,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
                     }
                 }
             }
-            throw new ResourceNotFoundException("An address could not be found matching " + ipAddress + " in " + regionId);
+            throw new ResourceNotFoundException("IP address", ipAddress + " in region " + regionId);
 	    } catch (IOException ex) {
             logger.error(ex.getMessage());
 			if (ex.getClass() == GoogleJsonResponseException.class) {
@@ -218,7 +217,14 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
                     for(Address address : addressList.getItems()){
                         IpAddress ipAddress = toIpAddress(address);
                         if(ipAddress != null) {
-                            addresses.add(ipAddress);
+                            if (unassignedOnly) {
+                                if (!ipAddress.isAssigned()) {
+                                     addresses.add(ipAddress);
+                                }
+                            }
+                            else {
+                                addresses.add(ipAddress);
+                            }
                         }
                     }
                 }
@@ -280,12 +286,6 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         finally {
             APITrace.end();
         }
-    }
-
-    @Nonnull
-    @Override
-    public Iterable<IpForwardingRule> listRules(@Nonnull String addressId) throws InternalException, CloudException {
-        throw new OperationNotSupportedException("Forwarding rules are not supported by GCE");
     }
 
     @Override

@@ -267,7 +267,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         }
 
         if (null == databaseInstance) {
-            throw new ResourceNotFoundException("Database instance " + providerDatabaseId + " does not exist.");
+            throw new ResourceNotFoundException("Database instance", providerDatabaseId);
         }
         databaseInstance.setMaxDiskSize(storageInGigabytes * gigabyte);
 
@@ -456,7 +456,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             databaseInstance = sqlAdmin.instances().get(ctx.getAccountNumber(), providerDatabaseId).execute();
 
             if (null == databaseInstance) {
-                throw new ResourceNotFoundException("Database instance " + providerDatabaseId + " does not exist.");
+                throw new ResourceNotFoundException("Database instance", providerDatabaseId);
             }
             Settings settings = databaseInstance.getSettings();
             settings.setTier(newProductSize.toUpperCase());

@@ -33,6 +33,7 @@ import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
+import org.dasein.cloud.InvalidStateException;
 import org.dasein.cloud.OperationNotSupportedException;
 import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
@@ -91,7 +92,7 @@ public class DiskSupport extends AbstractVolumeSupport {
             try{
                 VirtualMachine vm = provider.getComputeServices().getVirtualMachineSupport().getVirtualMachine(toServer);
                 if (null == vm) {
-                    throw new ResourceNotFoundException("Virtual machine " + toServer + " does not exist.");
+                    throw new ResourceNotFoundException("Virtual machine", toServer);
                 }
                 Volume volume = getVolume(volumeId);
 
@@ -172,14 +173,17 @@ public class DiskSupport extends AbstractVolumeSupport {
             Compute gce = provider.getGoogleCompute();
             Operation job = null;
             try{
-                if (null != volume.getProviderVirtualMachineId()) {
+                if (null == volume.getProviderVirtualMachineId()) {
+                    throw new InvalidStateException("Volume "+volume.getName()+" is not attached. Detach not possible");
+                }
+                else {
                     String vmName = provider.getComputeServices().getVirtualMachineSupport().getVmNameFromId(volume.getProviderVirtualMachineId());
                     job = gce.instances().detachDisk(provider.getContext().getAccountNumber(), volume.getProviderDataCenterId(), vmName, volume.getDeviceId()).execute();
                     GoogleMethod method = new GoogleMethod(provider);
                     if (!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, "", volume.getProviderDataCenterId())){
                         throw new GeneralCloudException("An error occurred while detaching the volume: Operation Timedout", CloudErrorType.OPERATION_TIMED_OUT);
                     }
-                } // vm already deleted, silently do nothing in this case.
+                }
 	        } catch (IOException ex) {
 				logger.error(ex.getMessage());
 				if (ex.getClass() == GoogleJsonResponseException.class) {

@@ -154,17 +154,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 		throw new OperationNotSupportedException("GCE does not support cloning of instances via the API.");
 	}
 
-	@Override
-	public void disableAnalytics(@Nonnull String vmId) throws InternalException, CloudException {
-        throw new OperationNotSupportedException("GCE does not currently support analytics.");
-	}
-
-	@Override
-	public void enableAnalytics(@Nonnull String vmId) throws InternalException, CloudException {
-        throw new OperationNotSupportedException("GCE does not currently support analytics.");
-	}
-
-    private transient volatile GCEInstanceCapabilities capabilities;
+	private transient volatile GCEInstanceCapabilities capabilities;
     @Override
     public @Nonnull GCEInstanceCapabilities getCapabilities(){
         if( capabilities == null ) {
@@ -208,7 +198,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
         if ((null != vm) && (null != vm.getProviderVirtualMachineId())) {
             return vm.getProviderVirtualMachineId();
         } else {
-            throw new ResourceNotFoundException("Unable to lookup vmId for vm named: " + vmName);
+            throw new ResourceNotFoundException("Virtual machine",  vmName);
         }
     }
 
@@ -231,7 +221,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 throw new GeneralCloudException("An error occurred when getting console output for VM: " + vmId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
             }
         }
-        throw new ResourceNotFoundException("The Virtual Machine: " + vmId + " could not be found.");
+        throw new ResourceNotFoundException("Virtual Machine", vmId);
 	}
 
 	@Override
@@ -379,7 +369,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             if ((image != null) && (image.getTag("contentLink") != null)) {
                 params.setSourceImage((String) image.getTag("contentLink"));
             } else {
-                throw new ResourceNotFoundException("Problem getting the contentLink tag value from the image for " + withLaunchOptions.getMachineImageId());
+                throw new ResourceNotFoundException("ContentLink tag value from the image", withLaunchOptions.getMachineImageId());
             }
             rootVolume.setInitializeParams(params);
 
@@ -544,7 +534,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
                 }
                 return vm;
             } else {
-                throw new ResourceNotFoundException("Could not find the instance: " + withLaunchOptions.getFriendlyName() + " after launch.");
+                throw new ResourceNotFoundException("Virtual machine ", withLaunchOptions.getFriendlyName() + " after launch.");
             }
         }
         finally {
@@ -821,7 +811,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             VirtualMachine vm = getVirtualMachine(vmId);
 
             if (null == vm) {
-                throw new ResourceNotFoundException("Virtual Machine " + vmId + " was not found.");
+                throw new ResourceNotFoundException("Virtual Machine", vmId);
             }
 
             try {

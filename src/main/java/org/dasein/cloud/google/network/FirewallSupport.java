@@ -224,7 +224,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 List<com.google.api.services.compute.model.Firewall> rules = firewallList.getItems();
                 return toFirewall(firewall, rules);
             } else {
-                throw new ResourceNotFoundException("Firewall Not Found: "+firewall.getName());
+                throw new ResourceNotFoundException("Firewall", firewallId);
             }
         } catch (IOException ex) {
             logger.error("An error occurred while getting firewall " + firewallId + ": " + ex.getMessage());
@@ -450,7 +450,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
             rule = current;
         }
         if (rule == null) {
-            throw new ResourceNotFoundException("The rule for " + direction.name() + ", " + permission.name() + ", " + source + ", " + beginPort + "-" + endPort + " does not exist");
+            throw new ResourceNotFoundException("The firewall rule", direction.name() + ", " + permission.name() + ", " + source + ", " + beginPort + "-" + endPort);
         }
         revoke(rule.getProviderRuleId());
     }
