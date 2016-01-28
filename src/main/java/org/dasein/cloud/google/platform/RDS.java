@@ -251,7 +251,8 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
      * configurationId - setting this may be inappropriate.
      * snapshotRetentionInDays - dbSnapshots are not currently supported for GCE as they require direct db access to restore.
      * configurationId - appears changing this really upsets the google
-     * preferredMaintenanceWindow - does not appear to be supported
+     * preferredMaintenanceWindow - only supported in 2nd generation instances (beta) 1 hour window 1 day per week
+     * preferredBackupWindow - every day 4 hour window (specify start time)
      */
     @Override
     public void alterDatabase(String providerDatabaseId, boolean applyImmediately, String productSize, int storageInGigabytes, String configurationId, String newAdminUser, String newAdminPassword, int newPort, int snapshotRetentionInDays, TimeWindow preferredMaintenanceWindow, TimeWindow preferredBackupWindow) throws CloudException, InternalException {
@@ -740,7 +741,13 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 product.setEngine(forEngine);
                 product.setStorageInGigabytes(sizeInGB);
                 product.setCurrency("USD");
-                product.setStandardHourlyRate(hourlyRate.get(t.getTier()));
+                try {
+                    product.setStandardHourlyRate(hourlyRate.get(t.getTier()));
+                }
+                catch ( NullPointerException e ) {
+                    logger.warn("Unable to find pricing for "+t.getTier());
+                    continue;
+                }
                 product.setStandardIoRate(ioRate);
                 product.setStandardStorageRate(storageRate);
                 products.add(product);
@@ -750,7 +757,13 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 product.setEngine(forEngine);
                 product.setStorageInGigabytes(sizeInGB);
                 product.setCurrency("USD");
-                product.setStandardHourlyRate(dailyRate.get(t.getTier()) / 24.0f);
+                try {
+                    product.setStandardHourlyRate(dailyRate.get(t.getTier()) / 24.0f);
+                }
+                catch ( NullPointerException e ) {
+                    logger.warn("Unable to find pricing for "+t.getTier());
+                    continue;
+                }
                 product.setStandardIoRate(ioRate);
                 product.setStandardStorageRate(storageRate);
                 product.setHighAvailability(true);       // Always On
