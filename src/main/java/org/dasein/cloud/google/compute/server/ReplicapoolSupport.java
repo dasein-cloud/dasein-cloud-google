@@ -103,9 +103,17 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                          if (null != result.getItems()) {
                              for (InstanceGroupManager item : result.getItems()) {
                                  ConvergedInfrastructure ci = ConvergedInfrastructure.getInstance(provider.getContext().getAccountNumber(), 
-                                         regionName, dataCenterId, item.getId().toString(), ConvergedInfrastructureState.RUNNING, item.getName(), item.getDescription(), item.getSelfLink());
-
-                                 convergedInfrastrutures.add(ci);
+                                         regionName, dataCenterId, item.getName(), ConvergedInfrastructureState.RUNNING, item.getName(), item.getDescription(), item.getInstanceTemplate());
+                                 ci.setTag("selfLink", item.getSelfLink());
+                                 ci.setTag("instanceGroupLink", item.getGroup());
+                                 if (options != null) {
+                                     if (options.matches(ci)) {
+                                         convergedInfrastrutures.add(ci);
+                                     }
+                                 }
+                                 else {
+                                     convergedInfrastrutures.add(ci);
+                                 }
                              }
                          }
                      }

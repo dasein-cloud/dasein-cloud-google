@@ -24,6 +24,7 @@ import org.dasein.cloud.ci.Topology.VMDevice;
 import org.dasein.cloud.ci.TopologyProvisionOptions.Disk;
 import org.dasein.cloud.ci.TopologyProvisionOptions.Network;
 import org.dasein.cloud.compute.Architecture;
+import org.dasein.cloud.compute.MachineImage;
 import org.dasein.cloud.compute.VirtualMachineProduct;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.GoogleException;
@@ -69,38 +70,40 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
         List<Topology> topologies = new ArrayList<Topology>();
         try {
             InstanceTemplateList templateList = instanceTemplates.list(getContext().getAccountNumber()).execute();
-            for (InstanceTemplate template : templateList.getItems()) {
-                InstanceProperties templateProperties = template.getProperties();
-                VMDevice vmDevices = null;
-                String machineType = templateProperties.getMachineType();
-                ServerSupport server = new ServerSupport(getProvider());
-                Iterable<VirtualMachineProduct> vmProducts = server.listProducts(Architecture.I64, "us-central1-f");
-                for (VirtualMachineProduct vmProduct: vmProducts) {
-                    if (vmProduct.getName().equals(machineType)) {
-                        vmDevices = VMDevice.getInstance(machineType, machineType, vmProduct.getCpuCount(), vmProduct.getRamSize(), (String) null);
+            if (templateList != null && templateList.getItems() != null) {
+                for (InstanceTemplate template : templateList.getItems()) {
+                    InstanceProperties templateProperties = template.getProperties();
+                    VMDevice vmDevices = null;
+                    String machineType = templateProperties.getMachineType();
+                    ServerSupport server = new ServerSupport(getProvider());
+                    Iterable<VirtualMachineProduct> vmProducts = server.listProducts(Architecture.I64, "us-central1-f");
+                    for (VirtualMachineProduct vmProduct : vmProducts) {
+                        if ( vmProduct.getName().equals(machineType) ) {
+                            vmDevices = VMDevice.getInstance(machineType, machineType, vmProduct.getCpuCount(), vmProduct.getRamSize(), (String) null);
+                        }
                     }
-                }
 
-                List<NetworkInterface> networkInterfaces = templateProperties.getNetworkInterfaces();
-                String name = null;
-                String deviceId = null;
-                for (NetworkInterface networkInterface: networkInterfaces) {
-                    deviceId = networkInterface.getNetwork();
-                    name = deviceId.replaceAll(".*/", "");
-                }
+                    List<NetworkInterface> networkInterfaces = templateProperties.getNetworkInterfaces();
+                    String name = null;
+                    String deviceId = null;
+                    for (NetworkInterface networkInterface : networkInterfaces) {
+                        deviceId = networkInterface.getNetwork();
+                        name = deviceId.replaceAll(".*/", "");
+                    }
 
-                Topology topology = Topology.getInstance(getContext().getAccountNumber(), null, template.getName(), TopologyState.ACTIVE, template.getName(), template.getDescription());
+                    Topology topology = Topology.getInstance(getContext().getAccountNumber(), null, template.getName(), TopologyState.ACTIVE, template.getName(), template.getDescription());
 
-                if (null != vmDevices) {
-                    topology = topology.withVirtualMachines(vmDevices);
-                }
+                    if ( null != vmDevices ) {
+                        topology = topology.withVirtualMachines(vmDevices);
+                    }
 
-                if ((null != name) && (null != deviceId)) {
-                    topology = topology.withVLANs(VLANDevice.getInstance(deviceId, name));
-                }
+                    if ( (null != name) && (null != deviceId) ) {
+                        topology = topology.withVLANs(VLANDevice.getInstance(deviceId, name));
+                    }
 
-                if ((null == options) || (options.matches(topology))) {
-                    topologies.add(topology); 
+                    if ( (null == options) || (options.matches(topology)) ) {
+                        topologies.add(topology);
+                    }
                 }
             }
         } catch ( IOException e ) {
@@ -119,7 +122,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
         InstanceProperties instanceProperties = new InstanceProperties();
         instanceProperties.setCanIpForward(withTopologyOptions.getCanIpForward());
         instanceProperties.setDescription(withTopologyOptions.getProductDescription());
-        instanceProperties.setMachineType(withTopologyOptions.getMachineType());
+
+        VirtualMachineProduct p = getProvider().getComputeServices().getVirtualMachineSupport().getProduct(withTopologyOptions.getMachineType());
+        instanceProperties.setMachineType(p.getName());
 
         List<Disk> disks = withTopologyOptions.getDiskArray();
         List<AttachedDisk> attachedDisks = new ArrayList<AttachedDisk>();
@@ -129,7 +134,8 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             disk.setBoot(topologyDisk.getBootable());
             disk.setDeviceName(withTopologyOptions.getProductName());
             AttachedDiskInitializeParams attachedDiskInitializeParams = new AttachedDiskInitializeParams();
-            attachedDiskInitializeParams.setSourceImage(topologyDisk.getDeviceSource());
+            MachineImage img = getProvider().getComputeServices().getImageSupport().getImage(topologyDisk.getDeviceSource());
+            attachedDiskInitializeParams.setSourceImage(img.getTag("contentLink").toString());
             if (topologyDisk.getDeviceType() == TopologyProvisionOptions.DiskType.SSD_PERSISTENT_DISK) {
                 attachedDiskInitializeParams.setDiskType("pd-ssd");
             } else {
