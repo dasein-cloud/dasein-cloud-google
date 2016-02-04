@@ -3,7 +3,7 @@
 
     <groupId>org.dasein</groupId>
     <artifactId>dasein-cloud-google</artifactId>
-    <version>2015.10.2</version>
+    <version>2015.10.3-SNAPSHOT</version>
 
     <name>Dasein Cloud Google</name>
     <description>
@@ -31,7 +31,7 @@
         <connection>scm:git:git://github.com/dasein-cloud/dasein-cloud-google.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/dasein-cloud/dasein-cloud-google.git</developerConnection>
         <url>http://github.com/dasein-cloud/dasein-cloud-google</url>
-      <tag>dasein-cloud-google-2015.10.2</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <dependencies>
