@@ -41,6 +41,7 @@ import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.GoogleMethod;
 import org.dasein.cloud.google.GoogleOperationType;
 import org.dasein.cloud.google.capabilities.GCEIPAddressCapabilities;
+import org.dasein.cloud.google.compute.server.ServerSupport;
 import org.dasein.cloud.identity.ServiceAction;
 import org.dasein.cloud.network.AbstractIpAddressSupport;
 import org.dasein.cloud.network.AddressType;
@@ -424,8 +425,16 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         ipAddress.setForVlan(false);
         if(address.getUsers() != null && address.getUsers().size() > 0){
             for(String user : address.getUsers()){
-                user = user.substring(user.lastIndexOf("/") + 1);
-                ipAddress.setServerId(user);
+                if (user.contains("instances")) {
+                    user = user.substring(user.lastIndexOf("/") + 1);
+                    //we need to get the full server name_id so that ids match up
+                    user = getServerIdForName(user);
+                    ipAddress.setServerId(user);
+                }
+                else if (user.contains("forwardingRules")) {
+                    user = user.substring(user.lastIndexOf("/") + 1);
+                    ipAddress.setProviderLoadBalancerId(user);
+                }
             }
         }
 
@@ -479,6 +488,19 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
             }
             return list;
         }
+    }
+
+    private String getServerIdForName(@Nonnull String serverName) {
+        String fullName = serverName;
+        try {
+            ServerSupport vmSupport = getProvider().getComputeServices().getVirtualMachineSupport();
+            VirtualMachine vm = vmSupport.getVirtualMachine(serverName);
+            fullName = vm.getProviderVirtualMachineId();
+        }
+        catch ( Exception e ) {
+            logger.warn("Unable to find full server id for "+serverName);
+        }
+        return fullName;
     }
 }
 
