@@ -20,13 +20,12 @@
 
 package org.dasein.cloud.google;
 
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
-
-import javax.annotation.Nonnull;
+import com.google.api.client.http.HttpTransport;
 import org.apache.log4j.Logger;
 
-import com.google.api.client.http.HttpTransport;
+import javax.annotation.Nonnull;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 public class LogHandler {
     private static java.util.logging.Logger logger;
@@ -44,13 +43,16 @@ public class LogHandler {
                         String msg = record.getMessage();
                         if (msg.startsWith("-------------- REQUEST")) {
                             String [] lines = msg.split("[\n\r]+");
-                            for (String line : lines)
-                                if ((line.contains("https")) || (line.contains("Content-Length")))
+                            for (String line : lines) {
+                                if ( (line.contains("https")) || (line.contains("Content-Length")) ) {
                                     wire.debug("--> REQUEST: " + line);
-                        } else if (msg.startsWith("{"))
+                                }
+                            }
+                        } else if (msg.startsWith("{")) {
                             wire.debug(msg);
-                        else if (msg.startsWith("Total"))
+                        } else if (msg.startsWith("Total")) {
                             wire.debug("<-- RESPONSE: " + record.getMessage());
+                        }
                     }
                     @Override public void flush() {}
                     @Override public void close() throws SecurityException {}

@@ -25,19 +25,19 @@ import com.google.api.services.storage.model.Bucket;
 import com.google.api.services.storage.model.BucketAccessControl;
 import com.google.api.services.storage.model.BucketAccessControls;
 import com.google.api.services.storage.model.Buckets;
-import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.ObjectAccessControl;
 import com.google.api.services.storage.model.ObjectAccessControls;
+import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import org.apache.log4j.Logger;
-import org.dasein.cloud.Capabilities;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
 import org.dasein.cloud.ProviderContext;
-import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.Google;
+import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.capabilities.GCEBlobStoreCapabilities;
 import org.dasein.cloud.identity.ServiceAction;
 import org.dasein.cloud.storage.AbstractBlobStoreSupport;
@@ -45,7 +45,6 @@ import org.dasein.cloud.storage.Blob;
 import org.dasein.cloud.storage.BlobStoreCapabilities;
 import org.dasein.cloud.storage.FileTransfer;
 import org.dasein.cloud.util.APITrace;
-import org.dasein.cloud.util.NamingConstraints;
 import org.dasein.util.uom.storage.Byte;
 import org.dasein.util.uom.storage.Storage;
 
@@ -57,12 +56,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Locale;
 
 public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     private Google provider;
@@ -79,7 +77,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
             try {
                 if( bucket == null ) {
                     logger.error("No bucket was specified for download file request");
-                    throw new OperationNotSupportedException("No bucket was specified for download file request");
+                    //todo this is not a cloud error but neither is the issue in dasein
+                    // should we have a new type of exception to highlight user/client data errors
+                    throw new InternalException("No bucket was specified for download file request");
                 }
                 InputStream input;
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
@@ -100,16 +100,17 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
                 }
                 catch( IOException e ) {
                     logger.error("Could not fetch file to " + toFile + ": " + e.getMessage());
-                    throw new CloudException(e);
+                    throw new GeneralCloudException("Could not fetch file to \" + toFile + \": \" + e.getMessage()", e, CloudErrorType.GENERAL);
                 }
     		} catch (IOException ex) {
 				logger.error(ex.getMessage());
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception downloading", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -123,7 +124,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
             try {
                 if( bucket == null ) {
                     logger.error("No bucket was specified for upload file request");
-                    throw new OperationNotSupportedException("No bucket was specified for upload file request");
+                    //todo this is not a cloud error but neither is the issue in dasein
+                    // should we have a new type of exception to highlight user/client data errors
+                    throw new InternalException("No bucket was specified for upload file request");
                 }
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
 
@@ -154,9 +157,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception uploading", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -168,7 +172,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             if( bucketName == null ) {
                 logger.error("No bucket was specified for upload file request");
-                throw new OperationNotSupportedException("No bucket was specified for upload file request");
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
+                throw new InternalException("No bucket was specified for upload file request");
             }
             try {
                 File tmp = File.createTempFile(objectName, ".txt");
@@ -197,18 +203,6 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         }
     }
 
-    @Override public boolean allowsNestedBuckets() throws CloudException, InternalException{
-        return false;
-    }
-
-    @Override public boolean allowsRootObjects() throws CloudException, InternalException{
-        return false;
-    }
-
-    @Override public boolean allowsPublicSharing() throws CloudException, InternalException{
-        return true;
-    }
-
     @Nonnull @Override public Blob createBucket(@Nonnull String bucket, boolean findFreeName) throws InternalException, CloudException{
         APITrace.begin(provider, "Blob.createBucket");
         try {
@@ -217,9 +211,6 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
             }
             try {
                 ProviderContext ctx = provider.getContext();
-                if (ctx == null) {
-                    throw new InternalException("Context is null");
-                }
                 String projectId = ctx.getAccountNumber();
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
                 Bucket newBucket = storage.buckets().insert(projectId, new Bucket().setName(bucket)).execute();
@@ -229,9 +220,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception creating bucket", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -280,9 +272,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				    return null;
     				}
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-    				throw new CloudException("An error occurred when getting bucket: " + bucketName + ": " + ex.getMessage());
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred when getting bucket: " + bucketName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -294,7 +287,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             if( bucketName == null ) {
                 logger.error("No bucket was specified for get object request");
-                throw new OperationNotSupportedException("No bucket was specified for get object request");
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
+                throw new InternalException("No bucket was specified for get object request");
             }
             try{
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
@@ -309,9 +304,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-    				throw new CloudException("An error occurred when getting bucket: " + bucketName + ": " + ex.getMessage());
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred when getting object: " + objectName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -327,11 +323,15 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             if( bucketName == null ) {
                 logger.error("No bucket was specified for get object size request");
-                throw new OperationNotSupportedException("No bucket was specified for get object request");
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
+                throw new InternalException("No bucket was specified for get object request");
             }
             if( objectName == null ) {
                 logger.error("No object was specified for get object size request");
-                throw new OperationNotSupportedException("No object was specified for get object request");
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
+                throw new InternalException("No object was specified for get object request");
             }
             Blob blob = getObject(bucketName, objectName);
             if (blob != null) {
@@ -342,34 +342,6 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         finally {
             APITrace.end();
         }
-    }
-
-    @Override public int getMaxBuckets() throws CloudException, InternalException{
-        return Capabilities.LIMIT_UNLIMITED;
-    }
-
-    @Override public Storage<Byte> getMaxObjectSize() throws InternalException, CloudException{
-        return new Storage<Byte>(Capabilities.LIMIT_UNKNOWN, Storage.BYTE);
-    }
-
-    @Override public int getMaxObjectsPerBucket() throws CloudException, InternalException{
-        return Capabilities.LIMIT_UNLIMITED;
-    }
-
-    @Nonnull @Override public NamingConstraints getBucketNameRules() throws CloudException, InternalException{
-        return NamingConstraints.getAlphaNumeric(3,222).withNoSpaces().withRegularExpression("(?:[a-z](?:[-a-z0-9.]{0,61}[a-z0-9])?)").lowerCaseOnly().constrainedBy(new char[]{'-', '_', '.'});
-    }
-
-    @Nonnull @Override public NamingConstraints getObjectNameRules() throws CloudException, InternalException{
-        return NamingConstraints.getAlphaNumeric(1, 255).withNoSpaces().withRegularExpression("(?:[a-z](?:[-a-z0-9.]{0,61}[a-z0-9])?)").lowerCaseOnly().constrainedBy(new char[]{'-', '_', '.'});
-    }
-
-    @Nonnull @Override public String getProviderTermForBucket(@Nonnull Locale locale){
-        return "bucket";
-    }
-
-    @Nonnull @Override public String getProviderTermForObject(@Nonnull Locale locale){
-        return "object";
     }
 
     @Override public boolean isPublic(@Nullable String bucket, @Nullable String object) throws CloudException, InternalException{
@@ -401,9 +373,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception checking object shared publicly", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -418,9 +391,6 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         APITrace.begin(provider, "Blob.list");
         try {
             ProviderContext ctx = provider.getContext();
-            if (ctx == null) {
-                throw new InternalException("Context is null");
-            }
             try {
                 ArrayList<Blob> list = new ArrayList<Blob>();
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
@@ -452,9 +422,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception listing buckets", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -466,6 +437,8 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             try {
                 if (bucket == null) {
+                    //todo this is not a cloud error but neither is the issue in dasein
+                    // should we have a new type of exception to highlight user/client data errors
                     throw new InternalException("Bucket not specified for makePublic request");
                 }
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
@@ -475,9 +448,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception making bucket public", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -489,6 +463,8 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             try {
                 if (bucket == null) {
+                    //todo this is not a cloud error but neither is the issue in dasein
+                    // should we have a new type of exception to highlight user/client data errors
                     throw new InternalException("Bucket not specified for makePublic request");
                 }
                 com.google.api.services.storage.Storage storage = provider.getGoogleStorage();
@@ -498,9 +474,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception making object public", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -511,9 +488,13 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         APITrace.begin(provider, "Blob.move");
         try {
             if (fromBucket == null || toBucket == null) {
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
                 throw new InternalException("One or both buckets not specified");
             }
             if (objectName == null)  {
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
                 throw new InternalException("Object name is not specified");
             }
             copyFile(fromBucket, objectName, toBucket, objectName);
@@ -540,9 +521,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception removing bucket", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -553,6 +535,8 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         APITrace.begin(provider, "Blob.removeObject");
         try {
             if (bucket == null) {
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
                throw new InternalException("Bucket is null for remove object request");
             }
             try {
@@ -563,9 +547,10 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new InternalException(ex);
-    		}
+    			} else {
+                    throw new GeneralCloudException("Exception removing object", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -588,7 +573,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         APITrace.begin(provider, "Blob.renameObject");
         try {
             if( bucket == null ) {
-                throw new CloudException("No bucket was specified");
+                //todo this is not a cloud error but neither is the issue in dasein
+                // should we have a new type of exception to highlight user/client data errors
+                throw new InternalException("No bucket was specified");
             }
             copy(bucket, oldName, bucket, newName);
             removeObject(bucket, oldName);
@@ -603,7 +590,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
         try {
             if( bucket == null ) {
                 logger.error("No bucket was specified for this request");
-                throw new OperationNotSupportedException("No bucket was specified for this request");
+                throw new OperationNotSupportedException("Root objects not supported in Google Storage");
             }
             if( !exists(bucket) ) {
                 createBucket(bucket, false);
@@ -622,12 +609,9 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
 
     private Blob toBucket(Bucket bucket) throws CloudException, InternalException {
         ProviderContext ctx = provider.getContext();
-        if (ctx == null) {
-            throw new InternalException("Context is null");
-        }
         String regionId = ctx.getRegionId();
         if (regionId == null) {
-            throw new InternalException("Regiond cannot be null");
+            throw new InternalException("Region id cannot be null");
         }
         String name = bucket.getName();
         long creationDate = bucket.getTimeCreated().getValue();
@@ -638,9 +622,6 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
 
     private Blob toObject(StorageObject object) throws CloudException, InternalException {
         ProviderContext ctx = provider.getContext();
-        if (ctx == null) {
-            throw new InternalException("Context is null");
-        }
         String regionId = ctx.getRegionId();
         if (regionId == null) {
             throw new InternalException("Regiond cannot be null");

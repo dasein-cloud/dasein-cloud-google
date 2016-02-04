@@ -19,16 +19,13 @@
 
 package org.dasein.cloud.google.capabilities;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import org.apache.log4j.Logger;
-import org.dasein.cloud.*;
+import org.dasein.cloud.AbstractCapabilities;
+import org.dasein.cloud.CloudException;
+import org.dasein.cloud.InternalException;
+import org.dasein.cloud.Requirement;
+import org.dasein.cloud.VisibleScope;
+import org.dasein.cloud.google.Google;
 import org.dasein.cloud.network.IPVersion;
 import org.dasein.cloud.network.LbAlgorithm;
 import org.dasein.cloud.network.LbEndpointType;
@@ -37,7 +34,13 @@ import org.dasein.cloud.network.LbProtocol;
 import org.dasein.cloud.network.LoadBalancerAddressType;
 import org.dasein.cloud.network.LoadBalancerCapabilities;
 import org.dasein.cloud.util.NamingConstraints;
-import org.dasein.cloud.google.Google;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 
 public class GCELoadBalancerCapabilities extends AbstractCapabilities<Google> implements LoadBalancerCapabilities {
 	static private final Logger logger = Logger.getLogger(GCELoadBalancerCapabilities.class);
@@ -60,22 +63,22 @@ public class GCELoadBalancerCapabilities extends AbstractCapabilities<Google> im
 
     @Override
     public int getMaxHealthCheckTimeout() throws CloudException, InternalException {
-        return 0;
+        return 5;
     }
 
     @Override
     public int getMinHealthCheckTimeout() throws CloudException, InternalException {
-        return 0;
+        return 1;
     }
 
     @Override
     public int getMaxHealthCheckInterval() throws CloudException, InternalException {
-        return 0;
+        return 5;
     }
 
     @Override
     public int getMinHealthCheckInterval() throws CloudException, InternalException {
-        return 0;
+        return 1;
     }
 
     @Nonnull

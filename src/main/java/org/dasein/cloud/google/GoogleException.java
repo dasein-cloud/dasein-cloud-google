@@ -109,6 +109,26 @@ public class GoogleException extends CloudException {
 
 	public GoogleException(@Nonnull CloudErrorType type, @Nonnegative int httpCode, @Nonnull String providerCode, @Nonnull String message) {
 		super(type, httpCode, providerCode, message);
+		if (type.equals(CloudErrorType.GENERAL)) {
+			switch( httpCode ) {
+				case 400:
+					this.errorType = CloudErrorType.INVALID_USER_DATA;
+					break;
+				case 401:
+				case 403:
+					this.errorType = CloudErrorType.AUTHENTICATION;
+					break;
+				case 404:
+					this.errorType = CloudErrorType.RESOURCE_NOT_FOUND;
+					break;
+				case 429:
+					errorType = CloudErrorType.THROTTLING;
+					break;
+				case 503:
+					errorType = CloudErrorType.COMMUNICATION;
+					break;
+			}
+		}
 	}
 
 	public GoogleException(ParsedException exception) {

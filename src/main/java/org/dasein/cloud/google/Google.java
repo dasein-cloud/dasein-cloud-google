@@ -19,15 +19,6 @@
 
 package org.dasein.cloud.google;
 
-import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -39,15 +30,15 @@ import com.google.api.services.replicapool.Replicapool;
 import com.google.api.services.sqladmin.SQLAdmin;
 import com.google.api.services.sqladmin.SQLAdminScopes;
 import com.google.api.services.storage.Storage;
-
 import org.apache.log4j.Logger;
 import org.dasein.cloud.AbstractCloud;
-import org.dasein.cloud.CloudErrorType;
+import org.dasein.cloud.AuthenticationException;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
-import org.dasein.cloud.google.LogHandler;
+import org.dasein.cloud.ci.CIServices;
+import org.dasein.cloud.ci.GoogleCIServices;
 import org.dasein.cloud.google.compute.GoogleCompute;
 import org.dasein.cloud.google.network.GoogleNetwork;
 import org.dasein.cloud.google.platform.GooglePlatform;
@@ -56,11 +47,24 @@ import org.dasein.cloud.util.Cache;
 import org.dasein.cloud.util.CacheLevel;
 import org.dasein.util.uom.time.Hour;
 import org.dasein.util.uom.time.TimePeriod;
-import org.dasein.cloud.ci.CIServices;
-import org.dasein.cloud.ci.GoogleCIServices;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * Support for the Google API through Dasein Cloud.
@@ -172,9 +176,6 @@ public class Google extends AbstractCloud {
     public @Nullable String getProxyHost() {
         ProviderContext ctx = getContext();
 
-        if( ctx == null ) {
-            return null;
-        }
         Properties props = ctx.getCustomProperties();
 
         return ( props == null ? null : props.getProperty("proxyHost") );
@@ -183,9 +184,6 @@ public class Google extends AbstractCloud {
     public int getProxyPort() {
         ProviderContext ctx = getContext();
 
-        if( ctx == null ) {
-            return -1;
-        }
         Properties props = ctx.getCustomProperties();
 
         if( props == null ) {
@@ -207,7 +205,7 @@ public class Google extends AbstractCloud {
     @Override
     public @Nonnull String getProviderName() {
         ProviderContext ctx = getContext();
-        String name = (ctx == null ? null : ctx.getCloud().getCloudName());
+        String name = ctx.getCloud().getCloudName();
 
         return (name == null ? "Google" : name);
     }
@@ -218,17 +216,19 @@ public class Google extends AbstractCloud {
         String proxyHost = null;
 
         List<ContextRequirements.Field> fields = getContextRequirements().getConfigurableValues();
-        for(ContextRequirements.Field f : fields )
-            if ((f.compatName == null) && (f.name.equals("proxyHost")))
+        for(ContextRequirements.Field f : fields ) {
+            if ( (f.compatName == null) && (f.name.equals("proxyHost")) ) {
                 proxyHost = getProxyHost();
-            else if ((f.compatName == null) && (f.name.equals("proxyPort")))
+            } else if ( (f.compatName == null) && (f.name.equals("proxyPort")) ) {
                 proxyPort = getProxyPort();
-
+            }
+        }
         if ( proxyHost != null && proxyHost.length() > 0 && proxyPort > 0 ) {
             Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
             transport = new NetHttpTransport.Builder().setProxy(proxy).build();
-        } else
+        } else {
             transport = new NetHttpTransport();
+        }
         return transport;
     }
 
@@ -245,11 +245,12 @@ public class Google extends AbstractCloud {
                     byte[][] keyPair = (byte[][])getContext().getConfigurationValue(f);
                     p12Bytes = keyPair[0];
                     p12Password = new String(keyPair[1], "utf-8");
-                } else if(f.compatName != null && f.compatName.equals(ContextRequirements.Field.ACCESS_KEYS))
-                    serviceAccountId = (String)getContext().getConfigurationValue(f);
+                } else if(f.compatName != null && f.compatName.equals(ContextRequirements.Field.ACCESS_KEYS)) {
+                    serviceAccountId = (String) getContext().getConfigurationValue(f);
+                }
             }
         } catch(Exception ex) {
-                throw new CloudException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -283,7 +284,7 @@ public class Google extends AbstractCloud {
                 computeCache.put(ctx, googleCompute);
             }
         } catch(Exception ex) {
-            throw new CloudException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
@@ -310,7 +311,7 @@ public class Google extends AbstractCloud {
                 storageCache.put(ctx, googleDrive);
             }
         } catch(Exception ex) {
-            throw new CloudException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
@@ -337,7 +338,7 @@ public class Google extends AbstractCloud {
                 sqlCache.put(ctx, googleSql);
             }
         } catch (Exception ex){
-            throw new CloudException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedSqlCredential.iterator().next());
@@ -369,7 +370,7 @@ public class Google extends AbstractCloud {
                 replicapoolCache.put(ctx, replicaPool);
             }
         } catch (Exception ex){
-            throw new CloudException(CloudErrorType.AUTHENTICATION, 400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
         }
 
         initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
@@ -380,17 +381,14 @@ public class Google extends AbstractCloud {
 
     @Override
     public @Nullable String testContext() {
-        if (logger.isTraceEnabled())
+        if (logger.isTraceEnabled()) {
             logger.trace("ENTER - " + Google.class.getName() + ".testContext()");
-
+        }
         NetHttpTransport httpTransport2 = new NetHttpTransport();
 
         JacksonFactory jsonFactory2 = new JacksonFactory();
 
         ProviderContext ctx = getContext();
-        if (ctx == null)
-            return null;
-
         try {
             GoogleCredential creds = null;
             Compute googleCompute = null;
@@ -406,12 +404,13 @@ public class Google extends AbstractCloud {
                 return null;
             }
         } finally {
-            if (logger.isTraceEnabled())
+            if (logger.isTraceEnabled()) {
                 logger.trace("EXIT - " + Google.class.getName() + ".textContext()");
+            }
         }
     }
 
-    public long parseTime(@Nullable String time) throws CloudException {
+    public long parseTime(@Nullable String time) throws InternalException {
         if (time == null) {
             return 0L;
         }
@@ -425,7 +424,7 @@ public class Google extends AbstractCloud {
                 try {
                     return fmt.parse(time).getTime();
                 } catch (ParseException encore) {
-                    throw new CloudException("Could not parse date: " + time);
+                    throw new InternalException("Could not parse date: " + time);
                 }
             }
         }

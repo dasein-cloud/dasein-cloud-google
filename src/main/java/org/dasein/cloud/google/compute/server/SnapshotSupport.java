@@ -87,18 +87,21 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
                 if(method.getOperationComplete(provider.getContext(), job, GoogleOperationType.ZONE_OPERATION, "", volume.getProviderDataCenterId())){
                     SnapshotList snapshots = gce.snapshots().list(provider.getContext().getAccountNumber()).setFilter("name eq " + options.getName()).execute();
                     for(com.google.api.services.compute.model.Snapshot s : snapshots.getItems()){
-                        if(s.getName().equals(options.getName()))return s.getName();
+                        if(s.getName().equals(options.getName())) {
+                            return s.getName();
+                        }
                     }
                 }
-                throw new CloudException("An error occurred creating the snapshot: Operation Timedout");
+                throw new GeneralCloudException("An error occurred creating the snapshot: Operation Timedout", CloudErrorType.OPERATION_TIMED_OUT);
     	    } catch (IOException ex) {
                 logger.error(ex.getMessage());
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new CloudException("An error occurred creating the snapshot: " + ex.getMessage());
-    		} catch (Exception ex) {
+    			} else {
+                    throw new GeneralCloudException("An error occurred creating the snapshot: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            } catch (Exception ex) {
     		    throw new OperationNotSupportedException("Copying snapshots is not supported in GCE");
     		}
         }
@@ -117,11 +120,6 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
     }
 
     @Override
-    public @Nonnull String getProviderTermForSnapshot(@Nonnull Locale locale){
-        return "snapshot";
-    }
-
-    @Override
     public Snapshot getSnapshot(@Nonnull String snapshotId) throws InternalException, CloudException{
         APITrace.begin(provider, "Snapshot.getSnapshot");
         try{
@@ -130,15 +128,17 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
                 com.google.api.services.compute.model.Snapshot snapshot = gce.snapshots().get(provider.getContext().getAccountNumber(), snapshotId).execute();
                 return toSnapshot(snapshot);
     	    } catch (IOException ex) {
-    	        if ((ex.getMessage() != null) && (ex.getMessage().contains("404 Not Found"))) // not found.
-    	            return null;
+    	        if ((ex.getMessage() != null) && (ex.getMessage().contains("404 Not Found"))) {// not found.
+                    return null;
+                }
                 logger.error(ex.getMessage());
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new CloudException("An error occurred getting the snapshot: " + ex.getMessage());
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred getting the snapshot: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -171,7 +171,9 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
                 if(list != null && list.size() > 0){
                     for(com.google.api.services.compute.model.Snapshot googleSnapshot : list.getItems()){
                         ResourceStatus status = toStatus(googleSnapshot);
-                        if(status != null)statuses.add(status);
+                        if(status != null) {
+                            statuses.add(status);
+                        }
                     }
                 }
                 return statuses;
@@ -180,9 +182,10 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new CloudException("An error occurred retrieving snapshot status");
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred retrieving snapshot status", ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -200,7 +203,9 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
                 if(list != null && list.getItems() != null && list.getItems().size() > 0){
                     for(com.google.api.services.compute.model.Snapshot googleSnapshot : list.getItems()){
                         Snapshot snapshot = toSnapshot(googleSnapshot);
-                        if(snapshot != null)snapshots.add(snapshot);
+                        if(snapshot != null) {
+                            snapshots.add(snapshot);
+                        }
                     }
                 }
                 return snapshots;
@@ -209,9 +214,10 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
     			if (ex.getClass() == GoogleJsonResponseException.class) {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new CloudException("An error occurred while listing snapshots: " + ex.getMessage());
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred while listing snapshots: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -233,16 +239,17 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
 
                 GoogleMethod method = new GoogleMethod(provider);
                 if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")){
-                    throw new CloudException("An error occurred deleting the snapshot: Operation timed out");
+                    throw new GeneralCloudException("An error occurred deleting the snapshot: Operation timed out", CloudErrorType.OPERATION_TIMED_OUT);
                 }
     	    } catch (IOException ex) {
     			if (ex.getClass() == GoogleJsonResponseException.class) {
                     logger.error(ex.getMessage());
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-    			} else
-                    throw new CloudException("An error occurred deleting the snapshot: " + ex.getMessage());
-    		}
+    			} else {
+                    throw new GeneralCloudException("An error occurred deleting the snapshot: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
+            }
         }
         finally {
             APITrace.end();
@@ -311,8 +318,12 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
         snapshot.setDescription(googleSnapshot.getDescription());
         snapshot.setOwner(provider.getContext().getAccountNumber());
         SnapshotState state = SnapshotState.PENDING;
-        if(googleSnapshot.getStatus().equals("READY"))state = SnapshotState.AVAILABLE;
-        else if(googleSnapshot.getStatus().equals("DELETING"))state = SnapshotState.DELETED;
+        if(googleSnapshot.getStatus().equals("READY")) {
+            state = SnapshotState.AVAILABLE;
+        }
+        else if(googleSnapshot.getStatus().equals("DELETING")) {
+            state = SnapshotState.DELETED;
+        }
         snapshot.setCurrentState(state);
         //TODO: Set visible scope for snapshots
         snapshot.setSizeInGb(googleSnapshot.getDiskSizeGb().intValue());
@@ -337,7 +348,9 @@ public class SnapshotSupport extends AbstractSnapshotSupport{
         else if(snapshot.getStatus().equals("DELETING")){
             state = SnapshotState.DELETED;
         }
-        else state = SnapshotState.PENDING;
+        else {
+            state = SnapshotState.PENDING;
+        }
 
         return new ResourceStatus(snapshot.getName(), state);
     }

@@ -82,18 +82,27 @@ public class GCEFirewallCapabilities extends AbstractCapabilities<Google> implem
 
     @Override
     public @Nonnull Iterable<Direction> listSupportedDirections( boolean inVlan ) throws InternalException, CloudException {
-        return Collections.unmodifiableList(Collections.singletonList(Direction.INGRESS));
+        if (inVlan) {
+            return Collections.unmodifiableList(Collections.singletonList(Direction.INGRESS));
+        }
+        return Collections.emptyList();
     }
 
     @Override
     public @Nonnull Iterable<Permission> listSupportedPermissions( boolean inVlan ) throws InternalException, CloudException {
-        return Collections.unmodifiableList(Collections.singletonList(Permission.ALLOW));
+        if (inVlan) {
+            return Collections.unmodifiableList(Collections.singletonList(Permission.ALLOW));
+        }
+        return Collections.emptyList();
     }
 
     @Override
     @Deprecated
     public @Nonnull Iterable<RuleTargetType> listSupportedSourceTypes( boolean inVlan ) throws InternalException, CloudException {
-        return listSupportedSourceTypes(inVlan, Direction.INGRESS);
+        if (inVlan) {
+            return listSupportedSourceTypes(inVlan, Direction.INGRESS);
+        }
+        return Collections.emptyList();
     }
 
     @Override
@@ -109,7 +118,10 @@ public class GCEFirewallCapabilities extends AbstractCapabilities<Google> implem
 
     @Override
     public boolean supportsRules( @Nonnull Direction direction, @Nonnull Permission permission, boolean inVlan ) throws CloudException, InternalException {
-        return ( permission.equals(Permission.ALLOW) && direction.equals(Direction.INGRESS) );
+        if (inVlan) {
+            return ( permission.equals(Permission.ALLOW) && direction.equals(Direction.INGRESS) );
+        }
+        return false;
     }
 
     @Override
@@ -127,32 +139,38 @@ public class GCEFirewallCapabilities extends AbstractCapabilities<Google> implem
     @Override
     @Nonnull
     public Iterable<Protocol> listSupportedProtocols( boolean inVlan ) throws InternalException, CloudException {
-        if( allProtocolTypes == null ) {
-            allProtocolTypes = Collections.unmodifiableList(Arrays.asList(Protocol.UDP, Protocol.TCP, Protocol.ICMP));
+        if (inVlan) {
+            if( allProtocolTypes == null ) {
+                allProtocolTypes = Collections.unmodifiableList(Arrays.asList(Protocol.UDP, Protocol.TCP, Protocol.ICMP));
+            }
+            return allProtocolTypes;
         }
-        return allProtocolTypes;
+        return Collections.emptyList();
     }
 
     @Override
     @Nonnull
     public Iterable<RuleTargetType> listSupportedDestinationTypes(boolean inVlan, @Nonnull Direction direction) throws InternalException, CloudException {
-        if (Direction.INGRESS == direction) {
-            return Collections.unmodifiableList(Arrays.asList(RuleTargetType.CIDR, RuleTargetType.VM));
+        if (inVlan) {
+            if (Direction.INGRESS == direction) {
+                return Collections.unmodifiableList(Arrays.asList(RuleTargetType.CIDR, RuleTargetType.VM));
+            }
+            else {
+                return Collections.emptyList();
+            }
         }
-        else {
-            return Collections.emptyList();
-        }
+        return Collections.emptyList();
     }
 
     @Override
     @Nonnull
     public Iterable<RuleTargetType> listSupportedSourceTypes(boolean inVlan, @Nonnull Direction direction) throws InternalException, CloudException {
-        if (Direction.INGRESS == direction) {
-            return Collections.unmodifiableList(Arrays.asList(RuleTargetType.CIDR, RuleTargetType.VM));
+        if (inVlan) {
+            if (Direction.INGRESS == direction) {
+                return Collections.unmodifiableList(Arrays.asList(RuleTargetType.CIDR, RuleTargetType.VM));
+            }
         }
-        else {
-            return Collections.emptyList();
-        }
+        return Collections.emptyList();
     }
 
     @Override

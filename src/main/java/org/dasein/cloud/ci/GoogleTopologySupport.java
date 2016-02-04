@@ -1,28 +1,5 @@
 package org.dasein.cloud.ci;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-
-import org.dasein.cloud.CloudErrorType;
-import org.dasein.cloud.CloudException;
-import org.dasein.cloud.InternalException;
-import org.dasein.cloud.ci.Topology.VLANDevice;
-import org.dasein.cloud.ci.Topology.VMDevice;
-import org.dasein.cloud.ci.TopologyProvisionOptions.Disk;
-import org.dasein.cloud.ci.TopologyProvisionOptions.Network;
-import org.dasein.cloud.compute.Architecture;
-import org.dasein.cloud.compute.VirtualMachineProduct;
-import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.GoogleException;
-import org.dasein.cloud.google.GoogleMethod;
-import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.compute.server.ServerSupport;
-
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute.InstanceTemplates;
 import com.google.api.services.compute.model.AccessConfig;
@@ -37,8 +14,33 @@ import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.api.services.compute.model.Scheduling;
 import com.google.api.services.compute.model.Tags;
+import org.apache.log4j.Logger;
+import org.dasein.cloud.CloudErrorType;
+import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
+import org.dasein.cloud.InternalException;
+import org.dasein.cloud.ci.Topology.VLANDevice;
+import org.dasein.cloud.ci.Topology.VMDevice;
+import org.dasein.cloud.ci.TopologyProvisionOptions.Disk;
+import org.dasein.cloud.ci.TopologyProvisionOptions.Network;
+import org.dasein.cloud.compute.Architecture;
+import org.dasein.cloud.compute.MachineImage;
+import org.dasein.cloud.compute.VirtualMachineProduct;
+import org.dasein.cloud.google.Google;
+import org.dasein.cloud.google.GoogleException;
+import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.compute.server.ServerSupport;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
+    static private final Logger logger = Google.getLogger(GoogleTopologySupport.class);
     private InstanceTemplates instanceTemplates = null;;
 
     public GoogleTopologySupport(Google provider) {
@@ -47,11 +49,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             instanceTemplates = getProvider().getGoogleCompute().instanceTemplates();
 
         } catch ( CloudException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error(e);
         } catch ( InternalException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 
@@ -70,43 +70,44 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
         List<Topology> topologies = new ArrayList<Topology>();
         try {
             InstanceTemplateList templateList = instanceTemplates.list(getContext().getAccountNumber()).execute();
-            for (InstanceTemplate template : templateList.getItems()) {
-                InstanceProperties templateProperties = template.getProperties();
-                VMDevice vmDevices = null;
-                String machineType = templateProperties.getMachineType();
-                ServerSupport server = new ServerSupport(getProvider());
-                Iterable<VirtualMachineProduct> vmProducts = server.listProducts(Architecture.I64, "us-central1-f");
-                for (VirtualMachineProduct vmProduct: vmProducts) {
-                    if (vmProduct.getName().equals(machineType)) {
-                        vmDevices = VMDevice.getInstance(machineType, machineType, vmProduct.getCpuCount(), vmProduct.getRamSize(), (String) null);
+            if (templateList != null && templateList.getItems() != null) {
+                for (InstanceTemplate template : templateList.getItems()) {
+                    InstanceProperties templateProperties = template.getProperties();
+                    VMDevice vmDevices = null;
+                    String machineType = templateProperties.getMachineType();
+                    ServerSupport server = new ServerSupport(getProvider());
+                    Iterable<VirtualMachineProduct> vmProducts = server.listProducts(Architecture.I64, "us-central1-f");
+                    for (VirtualMachineProduct vmProduct : vmProducts) {
+                        if ( vmProduct.getName().equals(machineType) ) {
+                            vmDevices = VMDevice.getInstance(machineType, machineType, vmProduct.getCpuCount(), vmProduct.getRamSize(), (String) null);
+                        }
                     }
-                }
 
-                List<NetworkInterface> networkInterfaces = templateProperties.getNetworkInterfaces();
-                String name = null;
-                String deviceId = null;
-                for (NetworkInterface networkInterface: networkInterfaces) {
-                    deviceId = networkInterface.getNetwork();
-                    name = deviceId.replaceAll(".*/", "");
-                }
+                    List<NetworkInterface> networkInterfaces = templateProperties.getNetworkInterfaces();
+                    String name = null;
+                    String deviceId = null;
+                    for (NetworkInterface networkInterface : networkInterfaces) {
+                        deviceId = networkInterface.getNetwork();
+                        name = deviceId.replaceAll(".*/", "");
+                    }
 
-                Topology topology = Topology.getInstance(getContext().getAccountNumber(), null, template.getName(), TopologyState.ACTIVE, template.getName(), template.getDescription());
+                    Topology topology = Topology.getInstance(getContext().getAccountNumber(), null, template.getName(), TopologyState.ACTIVE, template.getName(), template.getDescription());
 
-                if (null != vmDevices) {
-                    topology = topology.withVirtualMachines(vmDevices);
-                }
+                    if ( null != vmDevices ) {
+                        topology = topology.withVirtualMachines(vmDevices);
+                    }
 
-                if ((null != name) && (null != deviceId)) {
-                    topology = topology.withVLANs(VLANDevice.getInstance(deviceId, name));
-                }
+                    if ( (null != name) && (null != deviceId) ) {
+                        topology = topology.withVLANs(VLANDevice.getInstance(deviceId, name));
+                    }
 
-                if ((null == options) || (options.matches(topology))) {
-                    topologies.add(topology); 
+                    if ( (null == options) || (options.matches(topology)) ) {
+                        topologies.add(topology);
+                    }
                 }
             }
         } catch ( IOException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new GeneralCloudException("Problem listing topologies", e, CloudErrorType.GENERAL);
         }
 
         return topologies;
@@ -121,7 +122,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
         InstanceProperties instanceProperties = new InstanceProperties();
         instanceProperties.setCanIpForward(withTopologyOptions.getCanIpForward());
         instanceProperties.setDescription(withTopologyOptions.getProductDescription());
-        instanceProperties.setMachineType(withTopologyOptions.getMachineType());
+
+        VirtualMachineProduct p = getProvider().getComputeServices().getVirtualMachineSupport().getProduct(withTopologyOptions.getMachineType());
+        instanceProperties.setMachineType(p.getName());
 
         List<Disk> disks = withTopologyOptions.getDiskArray();
         List<AttachedDisk> attachedDisks = new ArrayList<AttachedDisk>();
@@ -131,11 +134,12 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             disk.setBoot(topologyDisk.getBootable());
             disk.setDeviceName(withTopologyOptions.getProductName());
             AttachedDiskInitializeParams attachedDiskInitializeParams = new AttachedDiskInitializeParams();
-            attachedDiskInitializeParams.setSourceImage(topologyDisk.getDeviceSource());
+            MachineImage img = getProvider().getComputeServices().getImageSupport().getImage(topologyDisk.getDeviceSource());
+            attachedDiskInitializeParams.setSourceImage(img.getTag("contentLink").toString());
             if (topologyDisk.getDeviceType() == TopologyProvisionOptions.DiskType.SSD_PERSISTENT_DISK) {
-                attachedDiskInitializeParams.setDiskType("SSD_PERSISTENT_DISK");
+                attachedDiskInitializeParams.setDiskType("pd-ssd");
             } else {
-                attachedDiskInitializeParams.setDiskType("STANDARD_PERSISTENT_DISK");
+                attachedDiskInitializeParams.setDiskType("pd-standard");
             }
                 
             disk.setInitializeParams(attachedDiskInitializeParams);
@@ -217,8 +221,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(ex.getMessage());
+            } else {
+                throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
         return true;
     }
@@ -234,8 +239,9 @@ public class GoogleTopologySupport extends AbstractTopologySupport<Google> {
                 if (ex.getClass() == GoogleJsonResponseException.class) {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-                } else
-                    throw new CloudException(ex.getMessage());
+                } else {
+                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                }
             }
         }
         return true;

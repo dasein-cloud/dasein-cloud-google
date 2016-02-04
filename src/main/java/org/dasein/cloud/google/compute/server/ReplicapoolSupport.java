@@ -19,19 +19,18 @@
 
 package org.dasein.cloud.google.compute.server;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-
-import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.GoogleMethod;
-import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.capabilities.GCEReplicapoolCapabilities;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.Instance;
+import com.google.api.services.compute.model.InstanceList;
+import com.google.api.services.compute.model.NetworkInterface;
+import com.google.api.services.replicapool.Replicapool;
+import com.google.api.services.replicapool.model.InstanceGroupManager;
+import com.google.api.services.replicapool.model.InstanceGroupManagerList;
+import com.google.api.services.replicapool.model.Operation;
 import org.apache.log4j.Logger;
+import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
 import org.dasein.cloud.ci.AbstractConvergedInfrastructureSupport;
@@ -41,16 +40,17 @@ import org.dasein.cloud.ci.ConvergedInfrastructure;
 import org.dasein.cloud.ci.ConvergedInfrastructureState;
 import org.dasein.cloud.dc.DataCenter;
 import org.dasein.cloud.dc.Region;
+import org.dasein.cloud.google.Google;
+import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.capabilities.GCEReplicapoolCapabilities;
 import org.dasein.cloud.util.APITrace;
 
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.Instance;
-import com.google.api.services.compute.model.InstanceList;
-import com.google.api.services.compute.model.NetworkInterface;
-import com.google.api.services.replicapool.Replicapool;
-import com.google.api.services.replicapool.model.InstanceGroupManager;
-import com.google.api.services.replicapool.model.InstanceGroupManagerList;
-import com.google.api.services.replicapool.model.Operation;
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Implements the replicapool services supported in the Google API.
@@ -103,15 +103,23 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                          if (null != result.getItems()) {
                              for (InstanceGroupManager item : result.getItems()) {
                                  ConvergedInfrastructure ci = ConvergedInfrastructure.getInstance(provider.getContext().getAccountNumber(), 
-                                         regionName, dataCenterId, item.getId().toString(), ConvergedInfrastructureState.RUNNING, item.getName(), item.getDescription(), item.getSelfLink());
-
-                                 convergedInfrastrutures.add(ci);
+                                         regionName, dataCenterId, item.getName(), ConvergedInfrastructureState.RUNNING, item.getName(), item.getDescription(), item.getInstanceTemplate());
+                                 ci.setTag("selfLink", item.getSelfLink());
+                                 ci.setTag("instanceGroupLink", item.getGroup());
+                                 if (options != null) {
+                                     if (options.matches(ci)) {
+                                         convergedInfrastrutures.add(ci);
+                                     }
+                                 }
+                                 else {
+                                     convergedInfrastrutures.add(ci);
+                                 }
                              }
                          }
                      }
                  }
              } catch ( IOException e ) {
-                 e.printStackTrace();
+                 throw new GeneralCloudException("Error listing converged infrastructure", e, CloudErrorType.GENERAL);
              }
         } finally{
             APITrace.end();
@@ -144,11 +152,10 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
             }
             return vms;
         } catch ( IOException e ) {
-            e.printStackTrace();
+            throw new GeneralCloudException("Error listing virtual machines", e, CloudErrorType.GENERAL);
         } finally{
             APITrace.end();
         }
-        return null;
     }
 
     @Override
@@ -181,11 +188,10 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
             }
             return nets;
         } catch ( IOException e ) {
-            e.printStackTrace();
+            throw new GeneralCloudException("Error listing vlans", e, CloudErrorType.GENERAL);
         } finally{
             APITrace.end();
         }
-        return null;
     }
 
     /*
@@ -210,12 +216,10 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
             method.getCIOperationComplete(ctx, job, GoogleOperationType.ZONE_OPERATION, region, options.getZone());
             return ConvergedInfrastructure.getInstance(ctx.getAccountNumber(), region, options.getZone(), options.getBaseInstanceName(), ConvergedInfrastructureState.RUNNING, options.getName(), options.getDescription(), options.getInstanceTemplate());
         } catch ( IOException e ) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            throw new GeneralCloudException("Error provisioning", e, CloudErrorType.GENERAL);
         } finally{
             APITrace.end();
         }
-        return null;
     }
 
     @Override
@@ -233,7 +237,7 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                  }
              }
         } catch ( IOException e ) {
-            e.printStackTrace();
+            throw new GeneralCloudException("Error terminating", e, CloudErrorType.GENERAL);
 
         } finally {
             APITrace.end();

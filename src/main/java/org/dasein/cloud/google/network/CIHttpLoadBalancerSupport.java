@@ -1,31 +1,5 @@
 package org.dasein.cloud.google.network;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import org.dasein.cloud.CloudErrorType;
-import org.dasein.cloud.CloudException;
-import org.dasein.cloud.InternalException;
-import org.dasein.cloud.ProviderContext;
-import org.dasein.cloud.Tag;
-import org.dasein.cloud.ci.AbstractConvergedHttpLoadBalancer;
-import org.dasein.cloud.ci.ConvergedHttpLoadBalancer;
-import org.dasein.cloud.ci.HttpLoadBalancerCapabilities;
-import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.GoogleException;
-import org.dasein.cloud.google.GoogleMethod;
-import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.capabilities.GCEHttpLoadBalancerCapabilities;
-import org.dasein.cloud.identity.ServiceAction;
-
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Backend;
@@ -41,6 +15,31 @@ import com.google.api.services.compute.model.TargetHttpProxy;
 import com.google.api.services.compute.model.TargetHttpProxyList;
 import com.google.api.services.compute.model.UrlMap;
 import com.google.api.services.compute.model.UrlMapList;
+import org.dasein.cloud.CloudErrorType;
+import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
+import org.dasein.cloud.InternalException;
+import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.Tag;
+import org.dasein.cloud.ci.AbstractConvergedHttpLoadBalancer;
+import org.dasein.cloud.ci.ConvergedHttpLoadBalancer;
+import org.dasein.cloud.ci.HttpLoadBalancerCapabilities;
+import org.dasein.cloud.google.Google;
+import org.dasein.cloud.google.GoogleException;
+import org.dasein.cloud.google.GoogleMethod;
+import org.dasein.cloud.google.GoogleOperationType;
+import org.dasein.cloud.google.capabilities.GCEHttpLoadBalancerCapabilities;
+import org.dasein.cloud.identity.ServiceAction;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer<Google> {
 
     private Google provider;
@@ -85,8 +84,9 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
 
         return httpLoadBalancers;
@@ -178,9 +178,9 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else
-                throw new CloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage());
+                throw new GeneralCloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         } catch (Exception ex) {
-            throw new CloudException("Error removing Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error listing Converged Http Load Balancers " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         return convergedHttpLoadBalancer;
     }
@@ -196,13 +196,15 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             Operation job = gce.globalForwardingRules().delete(ctx.getAccountNumber(), globalForwardingRule.replaceAll(".*/", "")).execute();
             method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, null, null);
         } catch ( IOException ex ) {
+            if (!ex.getMessage().contains("is already being used by")) {
+                return;
+            } // its ok not to remove resources in use elsewhere.
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing global forwarding rule " + ex.getMessage());
-        } catch (Exception ex) {
-            throw new CloudException("Error removing global forwarding rule " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred removing global forwarding rule " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
     }
 
@@ -217,13 +219,15 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             Operation job = gce.targetHttpProxies().delete(ctx.getAccountNumber(), targetHttpProxy.replaceAll(".*/", "")).execute();
             method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, null, null);
         } catch ( IOException ex ) {
+            if (!ex.getMessage().contains("is already being used by")) {
+                return;
+            }
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing target http proxy " + ex.getMessage());
-        } catch (Exception ex) {
-            throw new CloudException("Error removing target http proxy " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred removing target http proxy " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
     }
 
@@ -241,10 +245,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing url map " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred removing url map " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error removing url map " + ex.getMessage());
+            throw new GeneralCloudException("Error removing url map " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -259,15 +264,15 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             Operation job = gce.backendServices().delete(ctx.getAccountNumber(), backendService.replaceAll(".*/", "")).execute();
             method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, null, null);
         } catch ( IOException ex ) {
+            if (!ex.getMessage().contains("is already being used by")) {
+                return;
+            } // its ok not to remove resources in use elsewhere.
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing backend service " + ex.getMessage());
-        } catch (Exception ex) {
-            if (!ex.getMessage().contains("is already being used by")) {
-                throw new CloudException("Error removing backend service " + ex.getMessage());
-            } // its ok not to remove resources in use elsewhere.
+            } else {
+                throw new GeneralCloudException("An error occurred removing backend service " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
     }
 
@@ -282,15 +287,15 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             Operation job = gce.httpHealthChecks().delete(ctx.getAccountNumber(), httpHealthCheck.replaceAll(".*/", "")).execute();
             method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, null, null);
         } catch ( IOException ex ) {
+            if (!ex.getMessage().contains("is already being used by")) {
+                return;
+            } // its ok not to remove resources in use elsewhere.
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing http health check " + ex.getMessage());
-        } catch (Exception ex) {
-            if (!ex.getMessage().contains("is already being used by")) {
-                throw new CloudException("Error removing http health check " + ex.getMessage());
-            } // its ok not to remove resources in use elsewhere.
+            } else {
+                throw new GeneralCloudException("An error occurred removing http health check " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         }
     }
 
@@ -346,10 +351,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred removing convergedHttpLoadBalancer " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred removing convergedHttpLoadBalancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error removing Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error removing Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -390,10 +396,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
                     if (ex.getClass() == GoogleJsonResponseException.class) {
                         GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                         throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-                    } else
-                        throw new CloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage());
+                    } else {
+                        throw new GeneralCloudException("An error occurred creating backend service " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    }
                 } catch ( Exception ex ) {
-                    throw new CloudException("Error removing Converged Http Load Balancer " + ex.getMessage());
+                    throw new GeneralCloudException("Error creating backend service " + ex.getMessage(), ex, CloudErrorType.GENERAL);
                 }
                 backendService.setServiceUrl(gce.getBaseUrl() + ctx.getAccountNumber() + "/global/backendServices/" + backendService.getName());
             }
@@ -403,6 +410,9 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
     public void createURLMap(ConvergedHttpLoadBalancer withConvergedHttpLoadBalancerOptions) throws CloudException, InternalException {
         Compute gce = provider.getGoogleCompute();
         GoogleMethod method = new GoogleMethod(provider);
+
+        String origName = withConvergedHttpLoadBalancerOptions.getName();
+        String validName = getCapabilities().getConvergedHttpLoadBalancerNamingConstraints().convertToValidName(origName, Locale.US);
 
         try {
             List<ConvergedHttpLoadBalancer.UrlSet> urlSets = withConvergedHttpLoadBalancerOptions.getUrlSets();
@@ -457,7 +467,7 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             }
 
             urlMap.setHostRules(hostRules);
-            urlMap.setName(getCapabilities().getConvergedHttpLoadBalancerNamingConstraints().convertToValidName(withConvergedHttpLoadBalancerOptions.getName(), Locale.US));
+            urlMap.setName(validName);
             urlMap.setPathMatchers(pathMatchers);
             urlMap.setDescription(withConvergedHttpLoadBalancerOptions.getDescription());  // GCE does not support
             urlMap.setDefaultService(withConvergedHttpLoadBalancerOptions.getBackendServiceSelfUrl(withConvergedHttpLoadBalancerOptions.getDefaultBackendService()));
@@ -468,13 +478,14 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred creating convergedHttpLoadBalancers " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred creating url map " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating url map " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
 
-        withConvergedHttpLoadBalancerOptions.setUrlMapSelfUrl(gce.getBaseUrl() + ctx.getAccountNumber() + "/global/urlMaps/" + withConvergedHttpLoadBalancerOptions.getName());
+        withConvergedHttpLoadBalancerOptions.setUrlMapSelfUrl(gce.getBaseUrl() + ctx.getAccountNumber() + "/global/urlMaps/" + validName);
     }
 
     public void createTargetProxy(ConvergedHttpLoadBalancer withConvergedHttpLoadBalancerOptions) throws CloudException, InternalException {
@@ -496,10 +507,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred creating target proxy " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error removing Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating target proxy " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -527,10 +539,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred creating GlobalForwardingRule: " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred creating GlobalForwardingRule: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error occurred creating GlobalForwardingRule: " + ex.getMessage());
+            throw new GeneralCloudException("Error occurred creating GlobalForwardingRule: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -539,27 +552,27 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
         try {
             createHttpHealthChecks(withConvergedHttpLoadBalancerOptions);
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         try {
             createBackendService(withConvergedHttpLoadBalancerOptions);
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         try {
             createURLMap(withConvergedHttpLoadBalancerOptions);
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         try {
             createTargetProxy(withConvergedHttpLoadBalancerOptions);
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
         try {
             createGlobalForwardingRule(withConvergedHttpLoadBalancerOptions);
         } catch (Exception ex) {
-            throw new CloudException("Error creating Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating Converged Http Load Balancer " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
 
         return withConvergedHttpLoadBalancerOptions.getSelfLink();
@@ -592,10 +605,11 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
             if (ex.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException("An error occurred listing convergedHttpLoadBalancers " + ex.getMessage());
+            } else {
+                throw new GeneralCloudException("An error occurred creating http health checks " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+            }
         } catch (Exception ex) {
-            throw new CloudException("Error removing Converged Http Load Balancer " + ex.getMessage());
+            throw new GeneralCloudException("Error creating http health checks " + ex.getMessage(), ex, CloudErrorType.GENERAL);
         }
     }
 
@@ -624,5 +638,4 @@ public class CIHttpLoadBalancerSupport extends AbstractConvergedHttpLoadBalancer
         // TODO Auto-generated method stub
         return null;
     }
-
 }

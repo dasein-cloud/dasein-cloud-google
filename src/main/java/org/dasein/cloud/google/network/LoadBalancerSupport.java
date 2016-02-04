@@ -19,27 +19,34 @@
 
 package org.dasein.cloud.google.network;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.ForwardingRule;
+import com.google.api.services.compute.model.ForwardingRuleList;
+import com.google.api.services.compute.model.HealthCheckReference;
+import com.google.api.services.compute.model.HttpHealthCheck;
+import com.google.api.services.compute.model.InstanceReference;
+import com.google.api.services.compute.model.Operation;
+import com.google.api.services.compute.model.Region;
+import com.google.api.services.compute.model.TargetPool;
+import com.google.api.services.compute.model.TargetPoolList;
+import com.google.api.services.compute.model.TargetPoolsAddHealthCheckRequest;
+import com.google.api.services.compute.model.TargetPoolsAddInstanceRequest;
+import com.google.api.services.compute.model.TargetPoolsRemoveInstanceRequest;
+import org.apache.http.HttpStatus;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
+import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.compute.VirtualMachine;
+import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.GoogleMethod;
 import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.capabilities.GCELoadBalancerCapabilities;
 import org.dasein.cloud.network.AbstractLoadBalancerSupport;
 import org.dasein.cloud.network.HealthCheckFilterOptions;
@@ -62,21 +69,14 @@ import org.dasein.cloud.network.LoadBalancerHealthCheck.HCProtocol;
 import org.dasein.cloud.network.LoadBalancerState;
 import org.dasein.cloud.util.APITrace;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.ForwardingRule;
-import com.google.api.services.compute.model.ForwardingRuleList;
-import com.google.api.services.compute.model.HealthCheckReference;
-import com.google.api.services.compute.model.HttpHealthCheck;
-import com.google.api.services.compute.model.InstanceReference;
-import com.google.api.services.compute.model.Operation;
-import com.google.api.services.compute.model.Region;
-import com.google.api.services.compute.model.TargetPool;
-import com.google.api.services.compute.model.TargetPoolList;
-import com.google.api.services.compute.model.TargetPoolsAddHealthCheckRequest;
-import com.google.api.services.compute.model.TargetPoolsAddInstanceRequest;
-import com.google.api.services.compute.model.TargetPoolsRemoveHealthCheckRequest;
-import com.google.api.services.compute.model.TargetPoolsRemoveInstanceRequest;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * @author Roger Unwin
@@ -116,11 +116,12 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if ((lb.getAddress() != null) && (!lb.getAddress().equals(""))) {
                 IPAddressSupport ipSupport = provider.getNetworkServices().getIpAddressSupport();
                 String ip = lb.getAddress();
-                if (ip != null)
+                if (ip != null) {
                     ipSupport.releaseFromPool(ipSupport.getIpAddressIdFromIP(ip, provider.getContext().getRegionId()));
+                }
             }
         } catch (Exception e) {
-            throw new CloudException(e);
+            throw new GeneralCloudException("Exception releasing load balancer ip", e, CloudErrorType.GENERAL);
         }
     }
 
@@ -135,9 +136,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
 
         List<String> forwardingRuleNames = getForwardingRules(loadBalancerId);
         for (String forwardingRuleName : forwardingRuleNames)
-            if (forwardingRuleName != null)
-                removeLoadBalancerForwardingRule(forwardingRuleName); 
-
+            if (forwardingRuleName != null) {
+                removeLoadBalancerForwardingRule(forwardingRuleName);
+            }
         // Release IP used by Forwarding Rules [probably not desired]
         releaseLoadBalancerIp(lb);
 
@@ -150,13 +151,14 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                 removeLoadBalancerHealthCheck(healthCheckName);
             }
         } catch (CloudException e) {
-            throw new CloudException(e);
+            throw new GeneralCloudException("Exception removing load balancer", e, CloudErrorType.GENERAL);
         } catch (IOException e) {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception removing load balancer", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -172,8 +174,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception getting load balancer healthcheck name", e, CloudErrorType.GENERAL);
+            }
         }
 
         String healthCheck = null;
@@ -194,43 +197,52 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         List<String> forwardingRuleNames = new ArrayList<String>();
         try {
             ForwardingRuleList result = gce.forwardingRules().list(ctx.getAccountNumber(), ctx.getRegionId()).execute();
-            if ((result != null) && (result.getItems() != null))
+            if ((result != null) && (result.getItems() != null)) {
                 for (ForwardingRule fr : result.getItems()) {
                     String forwardingRuleTarget = fr.getTarget();
                     forwardingRuleTarget = forwardingRuleTarget.substring(forwardingRuleTarget.lastIndexOf("/") + 1);
 
-                    if (targetPoolName.equals(forwardingRuleTarget)) 
+                    if ( targetPoolName.equals(forwardingRuleTarget) ) {
                         forwardingRuleNames.add(fr.getName());
                     }
+                }
+            }
         } catch (IOException e) {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception getting load balancer forwarding rules", e, CloudErrorType.GENERAL);
+            }
         } finally {
             APITrace.end();
         }
         return forwardingRuleNames;
     }
 
-    private int flatten(@Nonnull String portRange) throws CloudException {
+    private int flatten(@Nonnull String portRange) throws InternalException {
         String[] ports = portRange.split("-");
-        if (ports[0].equals(ports[1]))
+        if (ports[0].equals(ports[1])) {
             return new Integer(ports[0]);
-        throw new CloudException("expected a port range like 80-80, got " + portRange);
+        }
+        //todo this isn't a cloud fault but neither is it a dasein problem
+        // should we have a new exception for errors caused by user/client provided data?
+        throw new InternalException("expected a port range like 80-80, got " + portRange);
     }
 
     private LbProtocol standardizeGCEProtocol(@Nonnull String protocol) {
-        if (protocol.equals("TCP"))
+        if (protocol.equals("TCP")) {
             return LbProtocol.RAW_TCP;
+        }
         return LbProtocol.valueOf(protocol);
     }
 
     private boolean isIPAddressInUse(@Nonnull String ipAddress, HashMap<String, ForwardingRule> rules) {
-        for (String ruleName : rules.keySet()) 
-            if (rules.get(ruleName).getIPAddress().equals(ipAddress)) 
+        for (String ruleName : rules.keySet()) {
+            if ( rules.get(ruleName).getIPAddress().equals(ipAddress) ) {
                 return true;
+            }
+        }
         return false;
     }
 
@@ -241,9 +253,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         List<String> existingForwardingRuleNames = getForwardingRules(toLoadBalancerId);
         try {
             HashMap<String, ForwardingRule> existingForwardingRules = new HashMap<String, ForwardingRule>();
-            for (String ruleName : existingForwardingRuleNames) 
+            for (String ruleName : existingForwardingRuleNames) {
                 existingForwardingRules.put(ruleName, gce.forwardingRules().get(ctx.getAccountNumber(), ctx.getRegionId(), ruleName).execute());
-
+            }
             for (String ruleName : existingForwardingRuleNames) {
                 for (LbListener listener : listeners) {
                     forwardingRule = existingForwardingRules.get(ruleName);
@@ -261,8 +273,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                             IPAddressSupport ipSupport = provider.getNetworkServices().getIpAddressSupport();
                             String ip = forwardingRule.getIPAddress();
 
-                            if (ip != null)
+                            if (ip != null) {
                                 ipSupport.releaseFromPool(ipSupport.getIpAddressIdFromIP(ip, provider.getContext().getRegionId()));
+                            }
                         }
                     }
                 }
@@ -271,8 +284,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception removing listeners", e, CloudErrorType.GENERAL);
+            }
         }
     }
 
@@ -289,8 +303,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception removing load balancer forwarding rule", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -316,14 +331,20 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                 if (e.getClass() == GoogleJsonResponseException.class) {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-                } else
-                    throw new CloudException(e);
+                } else {
+                    throw new GeneralCloudException("Exception creating load balancer", e, CloudErrorType.GENERAL);
+                }
             }
             HealthCheckOptions hco = options.getHealthCheckOptions();
 
             if (hco != null) {
-                LoadBalancerHealthCheck hc = createLoadBalancerHealthCheck(hco.getName(), hco.getDescription(), hco.getHost(), hco.getProtocol(), hco.getPort(), hco.getPath(), hco.getInterval(), hco.getTimeout(), hco.getHealthyCount(), hco.getUnhealthyCount());
-                attachHealthCheckToLoadBalancer(options.getName(), options.getHealthCheckOptions().getName());
+                //check if this health check already exists
+                String name = getCapabilities().getLoadBalancerNamingConstraints().convertToValidName(hco.getName(), Locale.US);
+                LoadBalancerHealthCheck lbhc = getLoadBalancerHealthCheck(name);
+                if ( lbhc == null ) {
+                    lbhc = createLoadBalancerHealthCheck(hco.getName(), hco.getDescription(), hco.getHost(), hco.getProtocol(), hco.getPort(), hco.getPath(), hco.getInterval(), hco.getTimeout(), hco.getHealthyCount(), hco.getUnhealthyCount());
+                }
+                attachHealthCheckToLoadBalancer(options.getName(), lbhc.getName());
             }
 
             createLoadBalancerForwardingRule(options);
@@ -342,27 +363,29 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
 
         try {
             TargetPool tp = gce.targetPools().get(ctx.getAccountNumber(), ctx.getRegionId(), toLoadBalancerId).execute();
-            if (tp == null)
-                throw new CloudException("Target Pool " + toLoadBalancerId + " not found.");
-
+            if (tp == null) {
+                throw new ResourceNotFoundException("Target Pool (load balancer)", toLoadBalancerId);
+            }
             List<String> forwardingRuleNames = getForwardingRules(toLoadBalancerId);
             String ipAddress = null;
             for (String ruleName : forwardingRuleNames) {
                 ForwardingRule forwardingRules = gce.forwardingRules().get(ctx.getAccountNumber(), ctx.getRegionId(), ruleName).execute();
-                if (null == ipAddress)
+                if (null == ipAddress) {
                     ipAddress = forwardingRules.getIPAddress();
+                }
                 String[] ruleNameComponents = ruleName.split("-");
                 if (ruleNameComponents[ruleNameComponents.length - 1].matches("\\d+")) {
                     int num = new Integer(ruleNameComponents[ruleNameComponents.length -1]);
 
-                    if (num >= index)
+                    if (num >= index) {
                         index = num + 1;
+                    }
                 }
             }
 
-            if (ipAddress == null)
+            if (ipAddress == null) {
                 ipAddress = provider.getNetworkServices().getIpAddressSupport().getIpAddress(provider.getNetworkServices().getIpAddressSupport().request(IPVersion.IPV4)).getRawAddress().getIpAddress();
-
+            }
             String targetPoolSelfLink = tp.getSelfLink();
 
             for ( LbListener listener : listeners) {
@@ -384,10 +407,11 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception adding listener", e, CloudErrorType.GENERAL);
+            }
         } catch (Exception e) {
-            throw new CloudException(e); // catch the exception from method.getOperation
+            throw new GeneralCloudException("Exception adding listener", e, CloudErrorType.GENERAL); // catch the exception from method.getOperation
         }
     }
 
@@ -401,25 +425,25 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         String targetPoolSelfLink = null;
         try {
             TargetPool tp = gce.targetPools().get(ctx.getAccountNumber(), ctx.getRegionId(), options.getName()).execute();
-            if (tp == null)
-                throw new CloudException("Target Pool " + options.getName() + " not found.");
-
+            if (tp == null) {
+                throw new ResourceNotFoundException("Target Pool (load balancer)", options.getName());
+            }
             targetPoolSelfLink = tp.getSelfLink();
 
             // Create an IP address for the load balancer if it is not specified.
             String ipAddress = options.getProviderIpAddressId();
-            if ((options.getProviderIpAddressId() == null) || (options.getProviderIpAddressId().equals(""))) 
+            if ((options.getProviderIpAddressId() == null) || (options.getProviderIpAddressId().equals(""))) {
                 ipAddress = provider.getNetworkServices().getIpAddressSupport().getIpAddress(provider.getNetworkServices().getIpAddressSupport().request(IPVersion.IPV4)).getRawAddress().getIpAddress();
-
+            }
             if (listeners.length > 0) {
                 // listeners specified
                 int index = 0;
                 for ( LbListener listener : listeners) {
                     ForwardingRule forwardingRule = new ForwardingRule();
                     String name = options.getName();
-                    if (listeners.length > 1)
+                    if (listeners.length > 1) {
                         name = name + "-" + index++;
-
+                    }
                     name = getCapabilities().getLoadBalancerNamingConstraints().convertToValidName(name, Locale.US);
                     forwardingRule.setName(name);
                     forwardingRule.setDescription(options.getDescription());
@@ -454,10 +478,11 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception creating forwarding rule", e, CloudErrorType.GENERAL);
+            }
         } catch (Exception e) {
-            throw new CloudException(e); // catch the exception from method.getOperation
+            throw new GeneralCloudException("Exception creating forwarding rule", e, CloudErrorType.GENERAL); // catch the exception from method.getOperation
         }
         finally {
             APITrace.end();
@@ -488,7 +513,7 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
 
         try {
             name = getCapabilities().getLoadBalancerNamingConstraints().convertToValidName(name, Locale.US);
-            hc.setName(getCapabilities().getLoadBalancerNamingConstraints().convertToValidName(name, Locale.US));
+            hc.setName(name);
             hc.setDescription(description);
             hc.setHost(host);
             // protocol
@@ -506,8 +531,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception creating health check", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -527,8 +553,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception getting health check for load balancer", e, CloudErrorType.GENERAL);
+            }
         }
 
         ArrayList <HealthCheckReference>hcl = new ArrayList<HealthCheckReference>();
@@ -544,8 +571,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception adding health check to load balancer", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -554,12 +582,12 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
 
     public LoadBalancerHealthCheck toLoadBalancerHealthCheck(String loadBalancerName, HttpHealthCheck hc)  throws CloudException, InternalException {
         HCProtocol protocol = HCProtocol.TCP;
-        if (loadBalancerName == null)
+        if (loadBalancerName == null) {
             throw new InternalException("loadBalancerName was null. Name is required");
-
-        if (hc == null)
+        }
+        if (hc == null) {
             throw new InternalException("HttpHealthCheck was null");
-
+        }
         Integer port = -1;
         if (hc.getPort() != null) {
             port = hc.getPort();
@@ -569,21 +597,21 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         }
 
         Integer checkIntervalSecond = -1;
-        if (hc.getCheckIntervalSec() != null)
+        if (hc.getCheckIntervalSec() != null) {
             checkIntervalSecond = hc.getCheckIntervalSec();
-
+        }
         Integer timeoutSec = -1;
-        if (hc.getTimeoutSec() != null)
+        if (hc.getTimeoutSec() != null) {
             timeoutSec = hc.getTimeoutSec();
-
+        }
         Integer healthyThreshold = -1;
-        if (hc.getHealthyThreshold() != null)
+        if (hc.getHealthyThreshold() != null) {
             healthyThreshold = hc.getHealthyThreshold();
-
+        }
         Integer unhealthyThreshold = -1;
-        if (hc.getUnhealthyThreshold() != null)
+        if (hc.getUnhealthyThreshold() != null) {
             unhealthyThreshold = hc.getUnhealthyThreshold();
-
+        }
         LoadBalancerHealthCheck lbhc = LoadBalancerHealthCheck.getInstance(
                 loadBalancerName, 
                 hc.getName(),
@@ -639,8 +667,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception listing load balancer health checks", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -662,12 +691,12 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else {
-                    throw new CloudException(e);
+                    throw new GeneralCloudException("Exception removing load balancer health check", e, CloudErrorType.GENERAL);
                 }
             }
         } catch (Exception e) {
             if (!e.getMessage().contains(" is already being used by ")) { //if its in use elsewhere, then let it be.
-                throw new CloudException(e);
+                throw new GeneralCloudException("Exception removing load balancer health check", e, CloudErrorType.GENERAL);
             }
         } finally {
             APITrace.end();
@@ -686,12 +715,14 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception getting helath check for modification", e, CloudErrorType.GENERAL);
+            }
         }
 
-        if (options.getName() != null)
+        if (options.getName() != null) {
             hc.setName(options.getName()); // Cannot set name to null 
+        }
         hc.setDescription(options.getDescription());
         hc.setHost(options.getHost());
         hc.setRequestPath(options.getPath());
@@ -708,8 +739,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception updating health check", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -730,17 +762,24 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         LoadBalancerHealthCheck lbhc = null;
         try {
             hc = (gce.httpHealthChecks().get(ctx.getAccountNumber(), providerLBHealthCheckId)).execute();
-
-            lbhc = toLoadBalancerHealthCheck(providerLBHealthCheckId, hc);
+            if (hc != null) {
+                lbhc = toLoadBalancerHealthCheck(providerLBHealthCheckId, hc);
+            }
             //lbhc.addProviderLoadBalancerId(hc.getName());
         } catch (NullPointerException e) {
             // not found, return null
         } catch (IOException e) {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
-                throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+                if( gjre.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+                    //not found, return null
+                }
+                else {
+                    throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
+                }
+            } else {
+                throw new GeneralCloudException("Exception getting load balancer health check", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -784,8 +823,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception adding servers to load balancer", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -800,16 +840,19 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         List<InstanceReference> replacementInstances = new ArrayList<InstanceReference>();
         try {
             TargetPool tp = gce.targetPools().get(ctx.getAccountNumber(), ctx.getRegionId(), fromLoadBalancerId).execute();
-            if (tp == null)
-                throw new CloudException("Target Pool " + fromLoadBalancerId + " not found.");
+            if (tp == null) {
+                throw new ResourceNotFoundException("Target Pool (load balancer)", fromLoadBalancerId);
+            }
             List<String> instances = tp.getInstances();
 
-            for (String i : instances)
+            for (String i : instances) {
                 for (String serverToRemove : serverIdsToRemove) {
                     String serverVmNameToRemove = provider.getComputeServices().getVirtualMachineSupport().getVmNameFromId(serverToRemove);
-                    if (i.endsWith(serverVmNameToRemove))
+                    if ( i.endsWith(serverVmNameToRemove) ) {
                         replacementInstances.add(new InstanceReference().setInstance(i));
+                    }
                 }
+            }
             TargetPoolsRemoveInstanceRequest content = new TargetPoolsRemoveInstanceRequest();
             content.setInstances(replacementInstances);
             gce.targetPools().removeInstance(ctx.getAccountNumber(), ctx.getRegionId(), fromLoadBalancerId, content).execute();
@@ -818,8 +861,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception removing servers", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -838,13 +882,14 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception listing endpoints", e, CloudErrorType.GENERAL);
+            }
         }
 
-        if (tp == null)
-            throw new CloudException("Target Pool " + forLoadBalancerId + " not found.");
-
+        if (tp == null) {
+            throw new ResourceNotFoundException("Target Pool (load balancer)", forLoadBalancerId);
+        }
         try {
             ArrayList<LoadBalancerEndpoint> list = new ArrayList<LoadBalancerEndpoint>();
             List<String> instances = tp.getInstances();
@@ -896,8 +941,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception listing load balancer status", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -910,10 +956,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         gce = provider.getGoogleCompute();
         ArrayList<LoadBalancer> list = new ArrayList<LoadBalancer>();
         try {
-            if (null == ctx.getAccountNumber())
-                throw new InternalException("Account number cannot be null");
-            if (null == ctx.getRegionId())
+            if (null == ctx.getRegionId()) {
                 throw new InternalException("RegionId cannot be null");
+            }
             TargetPoolList tpl = gce.targetPools().list(ctx.getAccountNumber(), ctx.getRegionId()).execute();
 
             if ((tpl != null) && (tpl.getItems() != null)) { 
@@ -932,8 +977,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
-            } else
-                throw new CloudException(e);
+            } else {
+                throw new GeneralCloudException("Exception listing load balancers", e, CloudErrorType.GENERAL);
+            }
         }
         finally {
             APITrace.end();
@@ -952,8 +998,8 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
         long created = 0;
         try {
             created = provider.parseTime(tp.getCreationTimestamp());
-        } catch (CloudException e) {
-            throw new CloudException(e);
+        } catch (InternalException e) {
+            throw new InternalException(e);
         }
         ForwardingRule fr = null;
         String forwardingRuleAddress = null;
@@ -968,9 +1014,10 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                     forwardingRuleAddress = fr.getIPAddress();
                     forwardingRulePortRange = fr.getPortRange();
                     ports = portsToRange(forwardingRulePortRange);
-                    for (int port : ports) 
+                    for (int port : ports) {
                         // Hard Coded Algorithm and persistence, havent found a dynamic source yet.
                         listeners.add(LbListener.getInstance(LbAlgorithm.SOURCE, LbPersistence.SUBNET, standardizeGCEProtocol(fr.getIPProtocol()), port, port));
+                    }
                 }
             }
         } catch (IOException e) {
@@ -1015,10 +1062,11 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
 
         LbListener LBListeners[] = new LbListener[listeners.size()];
         LBListeners = listeners.toArray(LBListeners);
-        if (!listeners.isEmpty())
+        if (!listeners.isEmpty()) {
             lb = lb.withListeners(LBListeners);
-        return lb;
         }
+        return lb;
+    }
 
     private int[] portsToRange(String portRange) {
         int[] ports;
@@ -1030,9 +1078,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
             for (int x = 0; x< (end - start) + 1; x++) {
                 ports[x] = start + x;
             }
-        } else
+        } else {
             ports = new int[]{new Integer(portRange)};
-
+        }
         return ports;
     }
 }

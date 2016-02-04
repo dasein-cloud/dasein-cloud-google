@@ -27,7 +27,6 @@ import org.dasein.cloud.compute.VmState;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.network.IPAddressCapabilities;
 import org.dasein.cloud.network.IPVersion;
-import org.dasein.cloud.util.NamingConstraints;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;
@@ -45,17 +44,23 @@ public class GCEIPAddressCapabilities extends AbstractCapabilities<Google> imple
     }
 
     @Override public boolean isAssigned(@Nonnull IPVersion version) throws CloudException, InternalException{
-        if(version.equals(IPVersion.IPV4))return true;
+        if(version.equals(IPVersion.IPV4)) {
+            return true;
+        }
         return false;
     }
 
     @Override public boolean canBeAssigned(@Nonnull VmState vmState) throws CloudException, InternalException{
-        if(vmState.equals(VmState.RUNNING))return true;
+        if(vmState.equals(VmState.RUNNING)) {
+            return true;
+        }
         return false;
     }
 
     @Override public boolean isAssignablePostLaunch(@Nonnull IPVersion version) throws CloudException, InternalException{
-        if(version.equals(IPVersion.IPV4))return true;
+        if(version.equals(IPVersion.IPV4)) {
+            return true;
+        }
         return false;
     }
 
@@ -65,7 +70,9 @@ public class GCEIPAddressCapabilities extends AbstractCapabilities<Google> imple
     }
 
     @Override public boolean isRequestable(@Nonnull IPVersion version) throws CloudException, InternalException{
-        if(version.equals(IPVersion.IPV4))return true;
+        if(version.equals(IPVersion.IPV4)) {
+            return true;
+        }
         return false;
     }
 
