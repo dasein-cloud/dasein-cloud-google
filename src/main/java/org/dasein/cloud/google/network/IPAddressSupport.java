@@ -19,22 +19,13 @@
 
 package org.dasein.cloud.google.network;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.services.compute.Compute;
+import com.google.api.services.compute.model.AccessConfig;
+import com.google.api.services.compute.model.Address;
+import com.google.api.services.compute.model.AddressAggregatedList;
+import com.google.api.services.compute.model.AddressList;
+import com.google.api.services.compute.model.Operation;
 import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
@@ -44,11 +35,12 @@ import org.dasein.cloud.ProviderContext;
 import org.dasein.cloud.Requirement;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.compute.VirtualMachine;
+import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.GoogleException;
 import org.dasein.cloud.google.GoogleMethod;
 import org.dasein.cloud.google.GoogleOperationType;
-import org.dasein.cloud.google.Google;
 import org.dasein.cloud.google.capabilities.GCEIPAddressCapabilities;
+import org.dasein.cloud.google.compute.server.ServerSupport;
 import org.dasein.cloud.identity.ServiceAction;
 import org.dasein.cloud.network.AbstractIpAddressSupport;
 import org.dasein.cloud.network.AddressType;
@@ -58,19 +50,18 @@ import org.dasein.cloud.network.IpForwardingRule;
 import org.dasein.cloud.network.Protocol;
 import org.dasein.cloud.util.APITrace;
 
-
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.services.compute.Compute;
-import com.google.api.services.compute.model.AccessConfig;
-import com.google.api.services.compute.model.Address;
-import com.google.api.services.compute.model.AddressAggregatedList;
-import com.google.api.services.compute.model.AddressList;
-import com.google.api.services.compute.model.Operation;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -505,8 +496,16 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         ipAddress.setForVlan(false);
         if(address.getUsers() != null && address.getUsers().size() > 0){
             for(String user : address.getUsers()){
-                user = user.substring(user.lastIndexOf("/") + 1);
-                ipAddress.setServerId(user);
+                if (user.contains("instances")) {
+                    user = user.substring(user.lastIndexOf("/") + 1);
+                    //we need to get the full server name_id so that ids match up
+                    user = getServerIdForName(user);
+                    ipAddress.setServerId(user);
+                }
+                else if (user.contains("forwardingRules")) {
+                    user = user.substring(user.lastIndexOf("/") + 1);
+                    ipAddress.setProviderLoadBalancerId(user);
+                }
             }
         }
 
@@ -564,6 +563,19 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
             }
             return list;
         }
+    }
+
+    private String getServerIdForName(@Nonnull String serverName) {
+        String fullName = serverName;
+        try {
+            ServerSupport vmSupport = getProvider().getComputeServices().getVirtualMachineSupport();
+            VirtualMachine vm = vmSupport.getVirtualMachine(serverName);
+            fullName = vm.getProviderVirtualMachineId();
+        }
+        catch ( Exception e ) {
+            logger.warn("Unable to find full server id for "+serverName);
+        }
+        return fullName;
     }
 }
 
