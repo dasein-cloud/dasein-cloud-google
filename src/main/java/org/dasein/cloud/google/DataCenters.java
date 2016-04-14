@@ -94,7 +94,7 @@ public class DataCenters implements DataCenterServices {
 				}
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else {
-                throw new GeneralCloudException("An error occurred retrieving the dataCenter: " + dataCenterId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred retrieving the dataCenter: " + dataCenterId + ": " + ex.getMessage());
             }
         }
 	}
@@ -114,7 +114,7 @@ public class DataCenters implements DataCenterServices {
                 }
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else {
-                throw new GeneralCloudException("An error occurred retrieving the region: " + providerRegionId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred retrieving the region: " + providerRegionId + ": " + ex.getMessage(), ex);
             }
         }
 	}
@@ -161,7 +161,7 @@ public class DataCenters implements DataCenterServices {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceDataCenters.getLastStatusCode(), gceDataCenters.getLastStatusMessage(), "An error occurred while listing DataCenters");
+                    throw new GeneralCloudException("An error occurred while listing DataCenters: "+gceDataCenters.getLastStatusMessage());
                 }
             }
             if (cache != null) {
@@ -205,7 +205,7 @@ public class DataCenters implements DataCenterServices {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException(CloudErrorType.COMMUNICATION, gceRegions.getLastStatusCode(), gceRegions.getLastStatusMessage(), "An error occurred while listing regions");
+                    throw new GeneralCloudException("An error occurred while listing regions: "+gceRegions.getLastStatusMessage());
                 }
             }
             cache.put(ctx, regions);

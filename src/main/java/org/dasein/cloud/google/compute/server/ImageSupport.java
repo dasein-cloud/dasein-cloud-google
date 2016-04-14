@@ -158,7 +158,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else {
-                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException(ex.getMessage(), ex);
                 }
             }
             return toMachineImage(image);
@@ -208,7 +208,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
 					GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 					throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 				} else {
-                    throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException(ex.getMessage(), ex);
                 }
             }
             return images;
@@ -269,7 +269,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
 
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else {
-                throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex);
             }
         }
 	}
@@ -557,7 +557,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else {
-                throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred while deleting the image: " + ex.getMessage(), ex);
             }
         }
 

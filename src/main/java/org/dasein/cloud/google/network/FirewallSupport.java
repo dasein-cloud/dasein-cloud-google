@@ -180,7 +180,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                         GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                         throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                     } else {
-                        throw new GeneralCloudException("An error occurred creating a new rule on " + firewallId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                        throw new GeneralCloudException("An error occurred creating a new rule on " + firewallId + ": " + ex.getMessage(), ex);
                     }
                 }
 
@@ -232,7 +232,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else {
-                throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException(ex.getMessage(), ex);
             }
         }
     }
@@ -259,7 +259,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else {
-                throw new GeneralCloudException(ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException(ex.getMessage(), ex);
             }
         }
     }
@@ -311,7 +311,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else {
-                throw new GeneralCloudException("An error occurred while listing Firewalls: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred while listing Firewalls: " + ex.getMessage(), ex);
             }
         }
         return firewalls;
@@ -349,13 +349,13 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     Operation job = gce.firewalls().update(provider.getContext().getAccountNumber(), firewall, fw).execute();
                     GoogleMethod method = new GoogleMethod(provider);
                     if (!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")) {
-                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out", CloudErrorType.OPERATION_TIMED_OUT);
+                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out");
                     }
                 } else {
                     Operation job = gce.firewalls().delete(provider.getContext().getAccountNumber(), providerFirewallRuleId).execute();
                     GoogleMethod method = new GoogleMethod(provider);
                     if(!method.getOperationComplete(provider.getContext(), job, GoogleOperationType.GLOBAL_OPERATION, "", "")) {
-                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out", CloudErrorType.OPERATION_TIMED_OUT);
+                        throw new GeneralCloudException("An error occurred deleting the rule: Operation Timed Out");
                     }
                 }
             } catch (IOException ex) {
@@ -364,7 +364,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
                     GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 } else {
-                    throw new GeneralCloudException("An error occurred while deleting the firewall rule: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred while deleting the firewall rule: " + ex.getMessage(), ex);
                 }
             }
         }

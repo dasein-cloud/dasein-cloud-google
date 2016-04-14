@@ -19,17 +19,18 @@
 
 package org.dasein.cloud.google.capabilities;
 
-import java.util.Locale;
-
-import javax.annotation.Nonnull;
-
 import org.dasein.cloud.AbstractCapabilities;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.Requirement;
 import org.dasein.cloud.google.Google;
+import org.dasein.cloud.platform.DatabaseProduct;
 import org.dasein.cloud.platform.RelationalDatabaseCapabilities;
 import org.dasein.cloud.util.NamingConstraints;
+
+import javax.annotation.Nonnull;
+import java.util.Locale;
 
 public class GCERelationalDatabaseCapabilities extends AbstractCapabilities<Google> implements RelationalDatabaseCapabilities {
 
@@ -49,6 +50,12 @@ public class GCERelationalDatabaseCapabilities extends AbstractCapabilities<Goog
     public String getProviderTermForSnapshot( Locale locale ) {
         //https://developers.google.com/cloud-sql/docs/backup-recovery#cloudsqladmin
         return "point-in-time recovery";
+    }
+
+    @Nonnull
+    @Override
+    public Requirement requiresEngineVersion() throws CloudException, InternalException {
+        return Requirement.OPTIONAL;
     }
 
     @Override
@@ -135,6 +142,26 @@ public class GCERelationalDatabaseCapabilities extends AbstractCapabilities<Goog
 
     @Override
     public @Nonnull NamingConstraints getRelationalDatabaseNamingConstraints() {
+        return NamingConstraints.getAlphaNumeric(1, 63).
+                withRegularExpression("^[a-z][-a-z0-9]{0,61}$")
+                .lowerCaseOnly()
+                .withNoSpaces()
+                .constrainedBy('-');
+    }
+
+    @Nonnull
+    @Override
+    public NamingConstraints getAdminUsernameNamingConstraints(DatabaseProduct product) throws CloudException, InternalException {
+        return NamingConstraints.getAlphaNumeric(1, 63).
+                withRegularExpression("^[a-z][-a-z0-9]{0,61}$")
+                .lowerCaseOnly()
+                .withNoSpaces()
+                .constrainedBy('-');
+    }
+
+    @Nonnull
+    @Override
+    public NamingConstraints getAdminPasswordNamingConstraints(DatabaseProduct product) throws CloudException, InternalException {
         return NamingConstraints.getAlphaNumeric(1, 63).
                 withRegularExpression("^[a-z][-a-z0-9]{0,61}$")
                 .lowerCaseOnly()

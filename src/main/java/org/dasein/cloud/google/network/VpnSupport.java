@@ -11,7 +11,6 @@ import com.google.api.services.compute.model.TargetVpnGateway;
 import com.google.api.services.compute.model.TargetVpnGatewayList;
 import com.google.api.services.compute.model.VpnTunnel;
 import com.google.api.services.compute.model.VpnTunnelList;
-import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
@@ -98,7 +97,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
                 createForwardingRule(vpnLaunchOptions.getName(), "-rule-udp4500", vpn.getProviderVpnIp(), "UDP", "4500");
 
             } catch ( Exception e ) {
-                throw new GeneralCloudException("Exception creating vpn", e, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("Exception creating vpn", e);
             }
         } finally {
             APITrace.end();
@@ -141,7 +140,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
                 op = gce.targetVpnGateways().delete(getContext().getAccountNumber(), getContext().getRegionId(), providerVpnId).execute();
                 method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
             } catch (IOException e ) {
-                throw new GeneralCloudException("Exception deleting vpn", e, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("Exception deleting vpn", e);
             }
         } finally {
             APITrace.end();
@@ -165,7 +164,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
         try {
             op = gce.forwardingRules().insert(getContext().getAccountNumber(), getContext().getRegionId(), frContent ).execute();
         } catch (Exception e ) {
-            throw new GeneralCloudException("Exception creating forwarding rule", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception creating forwarding rule", e);
         }
         method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
 
@@ -200,7 +199,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
 
             return toVpnGateway(vpnAfter);
         } catch ( Exception e ) {
-            throw new GeneralCloudException("Exception creating vpn gateway", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception creating vpn gateway", e);
         } finally {
             APITrace.end();
         }
@@ -226,7 +225,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
         try {
             op = gce.routes().insert(getContext().getAccountNumber(), routeContent ).execute();
         } catch (IOException e) {
-            throw new GeneralCloudException("Exception creating route", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception creating route", e);
         }
         method.getOperationComplete(getContext(), op, GoogleOperationType.GLOBAL_OPERATION, null, null);
     }
@@ -247,7 +246,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
             op = gce.vpnTunnels().delete(getContext().getAccountNumber(), getContext().getRegionId(), providerVpnGatewayId).execute();
             method.getOperationComplete(getContext(), op, GoogleOperationType.REGION_OPERATION, getContext().getRegionId(), null);
         } catch ( IOException e ) {
-            throw new GeneralCloudException("Exception deleting vpn gateway", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception deleting vpn gateway", e);
 
         } finally {
             APITrace.end();
@@ -298,7 +297,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
         try {
             vpnAfter = gce.vpnTunnels().get(getContext().getAccountNumber(), getContext().getRegionId(), gatewayId).execute();
         } catch ( IOException e ) {
-            throw new GeneralCloudException("Exception getting gateway", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception getting gateway", e);
         }
 
         return toVpnGateway(vpnAfter); 
@@ -325,7 +324,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
             }
             return null;
         } catch (IOException e) {
-            throw new GeneralCloudException("Exception getting vpn", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception getting vpn", e);
         } finally {
             APITrace.end();
         }
@@ -374,7 +373,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
                 try {
                     tunnels = gce.vpnTunnels().list(getContext().getAccountNumber(), region.getName()).execute();
                 } catch ( IOException e ) {
-                    throw new GeneralCloudException("Exception listing vpn connections", e, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception listing vpn connections", e);
                 }
 
                 if ((null != tunnels) && (null != tunnels.getItems())) {
@@ -422,7 +421,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
                 try {
                     tunnels = gce.vpnTunnels().list(getContext().getAccountNumber(), region.getName()).execute();
                 } catch ( IOException e ) {
-                    throw new GeneralCloudException("Exception listing vpn tunnels", e, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception listing vpn tunnels", e);
                 }
                 if ((null != tunnels) && (null != tunnels.getItems())) {
                     for (VpnTunnel tunnel : tunnels.getItems()) {
@@ -486,7 +485,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
                 }
             }
         } catch ( Exception e ) {
-            throw new GeneralCloudException("Exception listing vpns", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception listing vpns", e);
         } finally {
             APITrace.end();
         }
