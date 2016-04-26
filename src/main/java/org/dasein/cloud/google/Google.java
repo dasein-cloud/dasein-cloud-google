@@ -37,6 +37,8 @@ import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
+import org.dasein.cloud.ci.ConvergedInfrastructureServices;
+import org.dasein.cloud.ci.GoogleCIServices;
 import org.dasein.cloud.google.compute.GoogleCompute;
 import org.dasein.cloud.google.network.GoogleNetwork;
 import org.dasein.cloud.google.platform.GooglePlatform;
@@ -345,6 +347,38 @@ public class Google extends AbstractCloud {
         return googleSql.iterator().next();
     }
     
+    @Override
+    public @Nullable ConvergedInfrastructureServices getConvergedInfrastructureServices() {
+        return new GoogleCIServices(this);
+    }
+    
+    public Replicapool getGoogleReplicapool() throws CloudException, InternalException{
+        ProviderContext ctx = getContext();
+        Collection<GoogleCredential> cachedCredential = (Collection<GoogleCredential>)cachedCredentials.get(ctx);
+        Collection<Replicapool> replicaPool = (Collection<Replicapool>)replicapoolCache.get(ctx);
+        try {
+            final HttpTransport transport = getTransport();
+            if (cachedCredential == null) {
+                cachedCredential = new ArrayList<GoogleCredential>();
+                cachedCredential.add(getCreds(transport, jsonFactory, sqlScope));
+                cachedCredentials.put(ctx, cachedCredential);
+            }
+
+            if (replicaPool == null) {
+                replicaPool = new ArrayList<Replicapool>();
+                replicaPool.add((Replicapool) new Replicapool.Builder(transport, jsonFactory, cachedCredential.iterator().next()).setApplicationName(ctx.getAccountNumber()).setHttpRequestInitializer(initializer).build());
+                replicapoolCache.put(ctx, replicaPool);
+            }
+        } catch (Exception ex){
+            throw new AuthenticationException(400, "Bad Credentials", "An authentication error has occurred: Bad Credentials");
+        }
+
+        initializer.setStackedRequestInitializer(ctx, cachedCredential.iterator().next());
+        LogHandler.verifyInitialized();
+
+        return replicaPool.iterator().next();
+    }
+
     @Override
     public @Nullable String testContext() {
         if (logger.isTraceEnabled()) {
