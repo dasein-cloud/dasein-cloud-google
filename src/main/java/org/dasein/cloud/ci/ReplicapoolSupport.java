@@ -17,7 +17,7 @@
  * ====================================================================
  */
 
-package org.dasein.cloud.google.compute.server;
+package org.dasein.cloud.ci;
 
 import com.google.api.services.compute.Compute;
 import com.google.api.services.compute.model.Instance;
@@ -28,16 +28,12 @@ import com.google.api.services.replicapool.model.InstanceGroupManager;
 import com.google.api.services.replicapool.model.InstanceGroupManagerList;
 import com.google.api.services.replicapool.model.Operation;
 import org.apache.log4j.Logger;
-import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
+import org.dasein.cloud.OperationNotSupportedException;
 import org.dasein.cloud.ProviderContext;
-import org.dasein.cloud.ci.AbstractConvergedInfrastructureSupport;
-import org.dasein.cloud.ci.CIFilterOptions;
-import org.dasein.cloud.ci.CIProvisionOptions;
-import org.dasein.cloud.ci.ConvergedInfrastructure;
-import org.dasein.cloud.ci.ConvergedInfrastructureState;
+import org.dasein.cloud.ResourceType;
 import org.dasein.cloud.dc.DataCenter;
 import org.dasein.cloud.dc.Region;
 import org.dasein.cloud.google.Google;
@@ -47,6 +43,7 @@ import org.dasein.cloud.google.capabilities.GCEReplicapoolCapabilities;
 import org.dasein.cloud.util.APITrace;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +84,7 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
     }
 
     @Override
-    public Iterable<ConvergedInfrastructure> listConvergedInfrastructures(CIFilterOptions options) throws CloudException, InternalException {
+    public Iterable<ConvergedInfrastructure> listConvergedInfrastructures(ConvergedInfrastructureFilterOptions options) throws CloudException, InternalException {
         APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.listConvergedInfrastructures");
         List<ConvergedInfrastructure> convergedInfrastrutures = new ArrayList<ConvergedInfrastructure>();
         try {
@@ -102,10 +99,11 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                          result = rp.instanceGroupManagers().list(provider.getContext().getAccountNumber(), dataCenterId).execute(); //provider.getContext().getRegionId()
                          if (null != result.getItems()) {
                              for (InstanceGroupManager item : result.getItems()) {
-                                 ConvergedInfrastructure ci = ConvergedInfrastructure.getInstance(provider.getContext().getAccountNumber(), 
-                                         regionName, dataCenterId, item.getName(), ConvergedInfrastructureState.RUNNING, item.getName(), item.getDescription(), item.getInstanceTemplate());
+                                 ConvergedInfrastructure ci = ConvergedInfrastructure.getInstance(item.getName(), item.getName(), item.getDescription(),
+                                         ConvergedInfrastructureState.READY, System.currentTimeMillis(), dataCenterId, regionName, null);
                                  ci.setTag("selfLink", item.getSelfLink());
                                  ci.setTag("instanceGroupLink", item.getGroup());
+                                 loadResources(ci, dataCenterId);
                                  if (options != null) {
                                      if (options.matches(ci)) {
                                          convergedInfrastrutures.add(ci);
@@ -119,7 +117,7 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                      }
                  }
              } catch ( IOException e ) {
-                 throw new GeneralCloudException("Error listing converged infrastructure", e, CloudErrorType.GENERAL);
+                 throw new GeneralCloudException("Error listing converged infrastructure", e);
              }
         } finally{
             APITrace.end();
@@ -127,68 +125,36 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
         return convergedInfrastrutures;
     }
 
-    @Override
-    public Iterable<String> listVirtualMachines(String inCIId) throws InternalException, CloudException {
-        APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.listVirtualMachines");
-        List<String> vms = new ArrayList<String>();
-        try {
-            Replicapool rp = provider.getGoogleReplicapool();
-            Compute gce = provider.getGoogleCompute();
-            String datacenterId = null;
-            Iterable<ConvergedInfrastructure> cis = listConvergedInfrastructures(null);
-            for (ConvergedInfrastructure ci : cis) {
-                if (ci.getName().equals(inCIId)) {
-                    datacenterId = ci.getProviderDataCenterId();
-                }
-            }
-            
-            InstanceGroupManager pool = rp.instanceGroupManagers().get(provider.getContext().getAccountNumber(), datacenterId, inCIId).execute();
-            String baseInstanceName = pool.getBaseInstanceName();
-            InstanceList result = gce.instances().list(provider.getContext().getAccountNumber(), datacenterId).execute();
-            for (Instance instance : result.getItems()) {
-                if (instance.getName().startsWith(baseInstanceName + "-")) {
-                    vms.add(instance.getName());
-                }
-            }
-            return vms;
-        } catch ( IOException e ) {
-            throw new GeneralCloudException("Error listing virtual machines", e, CloudErrorType.GENERAL);
-        } finally{
-            APITrace.end();
-        }
-    }
-
-    @Override
-    public Iterable<String> listVLANs(String inCIId) throws CloudException, InternalException {
-        APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.listVLANs");
-        List<String> nets = new ArrayList<String>();
+    private void loadResources(ConvergedInfrastructure ci, String datacenterId) throws InternalException, CloudException {
+        APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.loadResources");
+        List<ConvergedInfrastructureResource> list = new ArrayList<>();
         try {
             Replicapool rp = provider.getGoogleReplicapool();
             Compute gce = provider.getGoogleCompute();
 
-            String datacenterId = null;
-            Iterable<ConvergedInfrastructure> cis = listConvergedInfrastructures(null);
-            for (ConvergedInfrastructure ci : cis) {
-                if (ci.getName().equals(inCIId)) {
-                    datacenterId = ci.getProviderDataCenterId();
-                }
-            }
-            
-            InstanceGroupManager pool = rp.instanceGroupManagers().get(provider.getContext().getAccountNumber(), datacenterId, inCIId).execute();
+            InstanceGroupManager pool = rp.instanceGroupManagers().get(provider.getContext().getAccountNumber(), datacenterId, ci.getProviderCIId()).execute();
             String baseInstanceName = pool.getBaseInstanceName();
             InstanceList result = gce.instances().list(provider.getContext().getAccountNumber(), datacenterId).execute();
             for (Instance instance : result.getItems()) {
                 if (instance.getName().startsWith(baseInstanceName + "-")) {
+                    ConvergedInfrastructureResource resource = ConvergedInfrastructureResource.getInstance(ResourceType.VIRTUAL_MACHINE, instance.getName());
+                    list.add(resource);
                     if (null != instance.getNetworkInterfaces()) {
                         for (NetworkInterface net : instance.getNetworkInterfaces()) {
-                            nets.add(net.getNetwork().replaceAll(".*/", ""));
+                            String vlan = net.getNetwork().replaceAll(".*/", "");
+                            resource = ConvergedInfrastructureResource.getInstance(ResourceType.VLAN, vlan);
+                            list.add(resource);
                         }
                     }
                 }
             }
-            return nets;
+            if (!list.isEmpty()){
+                ConvergedInfrastructureResource[] resources = new ConvergedInfrastructureResource[list.size()];
+                resources = list.toArray(resources);
+                ci.withResources(resources);
+            }
         } catch ( IOException e ) {
-            throw new GeneralCloudException("Error listing vlans", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Error listing virtual machines", e);
         } finally{
             APITrace.end();
         }
@@ -199,24 +165,24 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
      * @see org.dasein.cloud.ci.ConvergedInfrastructureSupport#provision(org.dasein.cloud.ci.CIProvisionOptions)
      */
     @Override
-    public ConvergedInfrastructure provision(CIProvisionOptions options) throws CloudException, InternalException {
+    public ConvergedInfrastructure provision(ConvergedInfrastructureProvisionOptions options) throws CloudException, InternalException {
         APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.provision");
         Replicapool rp = provider.getGoogleReplicapool();
         try {
             ProviderContext ctx = provider.getContext();
             InstanceGroupManager content = new InstanceGroupManager();
-            content.setBaseInstanceName(getCapabilities().getConvergedInfrastructureNamingConstraints().convertToValidName(options.getBaseInstanceName(), Locale.US));
+            content.setBaseInstanceName(getCapabilities().getConvergedInfrastructureNamingConstraints().convertToValidName(options.getBaseName(), Locale.US));
             content.setDescription(options.getDescription());
-            content.setInstanceTemplate("https://www.googleapis.com/compute/v1/projects/" + ctx.getAccountNumber() + "/global/instanceTemplates/" + options.getInstanceTemplate());
+            content.setInstanceTemplate("https://www.googleapis.com/compute/v1/projects/" + ctx.getAccountNumber() + "/global/instanceTemplates/" + options.getTemplate());
             content.setName(getCapabilities().getConvergedInfrastructureNamingConstraints().convertToValidName(options.getName(), Locale.US));
-            String region = options.getZone().replaceFirst("-.$", "");
+            String region = options.getProviderDatacenterId().replaceFirst("-.$", "");
             //content.setTargetPools(targetPools);
-            Operation job = rp.instanceGroupManagers().insert(ctx.getAccountNumber(), options.getZone(), options.getSize(), content).execute();
+            Operation job = rp.instanceGroupManagers().insert(ctx.getAccountNumber(), options.getProviderDatacenterId(), options.getInstanceCount(), content).execute();
             GoogleMethod method = new GoogleMethod(provider);
-            method.getCIOperationComplete(ctx, job, GoogleOperationType.ZONE_OPERATION, region, options.getZone());
-            return ConvergedInfrastructure.getInstance(ctx.getAccountNumber(), region, options.getZone(), options.getBaseInstanceName(), ConvergedInfrastructureState.RUNNING, options.getName(), options.getDescription(), options.getInstanceTemplate());
+            method.getCIOperationComplete(ctx, job, GoogleOperationType.ZONE_OPERATION, region, options.getProviderDatacenterId());
+            return ConvergedInfrastructure.getInstance(options.getName(), options.getName(), options.getDescription(), ConvergedInfrastructureState.READY, System.currentTimeMillis(), options.getProviderDatacenterId(), region, null);
         } catch ( IOException e ) {
-            throw new GeneralCloudException("Error provisioning", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Error provisioning", e);
         } finally{
             APITrace.end();
         }
@@ -231,13 +197,13 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
              Replicapool rp = provider.getGoogleReplicapool();
              for (ConvergedInfrastructure ci : listConvergedInfrastructures(null)) {
                  if (ci.getName().equals(ciId)) {
-                     Operation job = rp.instanceGroupManagers().delete(provider.getContext().getAccountNumber(), ci.getProviderDataCenterId(), ciId).execute();
+                     Operation job = rp.instanceGroupManagers().delete(provider.getContext().getAccountNumber(), ci.getProviderDatacenterId(), ciId).execute();
                      GoogleMethod method = new GoogleMethod(provider);
-                     method.getCIOperationComplete(ctx, job, GoogleOperationType.ZONE_OPERATION, ctx.getRegionId(), ci.getProviderDataCenterId());
+                     method.getCIOperationComplete(ctx, job, GoogleOperationType.ZONE_OPERATION, ctx.getRegionId(), ci.getProviderDatacenterId());
                  }
              }
         } catch ( IOException e ) {
-            throw new GeneralCloudException("Error terminating", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Error terminating", e);
 
         } finally {
             APITrace.end();
@@ -245,7 +211,12 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
     }
 
     @Override
-    public boolean hasConvergedHttpLoadBalancerSupport() {
-        return true;
+    public void cancelDeployment(@Nonnull String ciId, @Nullable String explanation) throws CloudException, InternalException {
+        throw new OperationNotSupportedException("Cancelling deployment not supported in "+getProvider().getCloudName());
+    }
+
+    @Override
+    public ConvergedInfrastructure validateDeployment(@Nonnull ConvergedInfrastructureProvisionOptions options) throws CloudException, InternalException {
+        return null;
     }
 }

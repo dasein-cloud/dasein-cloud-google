@@ -37,7 +37,7 @@ import org.dasein.cloud.CloudException;
 import org.dasein.cloud.ContextRequirements;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
-import org.dasein.cloud.ci.CIServices;
+import org.dasein.cloud.ci.ConvergedInfrastructureServices;
 import org.dasein.cloud.ci.GoogleCIServices;
 import org.dasein.cloud.google.compute.GoogleCompute;
 import org.dasein.cloud.google.network.GoogleNetwork;
@@ -348,7 +348,7 @@ public class Google extends AbstractCloud {
     }
     
     @Override
-    public @Nullable CIServices getCIServices() {
+    public @Nullable ConvergedInfrastructureServices getConvergedInfrastructureServices() {
         return new GoogleCIServices(this);
     }
     

@@ -1,12 +1,10 @@
 package org.dasein.cloud.ci;
 
+import org.dasein.cloud.google.Google;
+
 import javax.annotation.Nullable;
 
-import org.dasein.cloud.google.Google;
-import org.dasein.cloud.google.compute.server.ReplicapoolSupport;
-import org.dasein.cloud.google.network.CIHttpLoadBalancerSupport;
-
-public class GoogleCIServices extends AbstractCIServices<Google> {
+public class GoogleCIServices extends AbstractConvergedInfrastructureServices<Google> {
 
     public GoogleCIServices(Google provider) {
         super(provider);
@@ -18,27 +16,18 @@ public class GoogleCIServices extends AbstractCIServices<Google> {
     }
 
     @Override
+    public boolean hasConvergedInfrastructureSupport() {
+        return (getConvergedInfrastructureSupport() != null);
+    }
+
+
+    @Override
     public @Nullable TopologySupport getTopologySupport() {
         return new GoogleTopologySupport(getProvider());
     }
 
     @Override
-    public boolean hasConvergedInfrastructureSupport() {
-        return (getConvergedInfrastructureSupport() == null);
-    }
-
-    @Override
     public boolean hasTopologySupport() {
-        return (getTopologySupport() == null);
-    }
-
-    @Override
-    public ConvergedHttpLoadBalancerSupport getConvergedHttpLoadBalancerSupport() {
-        return new CIHttpLoadBalancerSupport(getProvider());
-    }
-
-    @Override
-    public boolean hasConvergedHttpLoadBalancerSupport() {
-        return (getConvergedHttpLoadBalancerSupport() != null);
+        return (getTopologySupport() != null);
     }
 }

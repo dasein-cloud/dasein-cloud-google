@@ -20,6 +20,7 @@
 package org.dasein.cloud.google.capabilities;
 
 import org.dasein.cloud.AbstractCapabilities;
+import org.dasein.cloud.Requirement;
 import org.dasein.cloud.ci.ConvergedInfrastructureCapabilities;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.util.NamingConstraints;
@@ -37,66 +38,6 @@ public class GCEReplicapoolCapabilities extends AbstractCapabilities<Google> imp
         // TODO Auto-generated constructor stub
     }
 
-    public boolean supportsHttpTraffic() {
-        return true;
-    }
-
-    public boolean supportsHttpsTraffic() {
-        return true;
-    }
-
-    public boolean supportsMetadata() {
-        return true;
-    }
-
-    public boolean supportsSshKeys() {
-        return true;
-    }
-
-    public boolean supportsTags() {
-        return true;
-    }
-
-    public boolean supportsSsdDisk() {
-        return true;
-    }
-
-    public boolean supportsStandardDisk() {
-        return true;
-    }
-
-    public boolean supportsDeleteDiskOnTerminate() {
-        return true;
-    }
-
-    public boolean supportsReadOnlySharedDisks() {
-        return true;
-    }
-
-    public boolean supportsVmAutomaticRestart() {
-        return true;
-    }
-
-    public boolean supportsMigrateVmOnMaintenance() {
-        return true;
-    }
-
-    public boolean supportsTemplates() {
-        return true;
-    }
-
-    public boolean supportsRegions() { // Zone
-        return true;
-    }
-
-    public boolean supportsCreateFromInstance() {
-        return true;
-    }
-
-    public boolean supportsAutoScaling() {
-        return true;
-    }
-
     @Override
     public @Nonnull NamingConstraints getConvergedInfrastructureNamingConstraints() {
         return NamingConstraints.getAlphaNumeric(1, 63)
@@ -105,5 +46,17 @@ public class GCEReplicapoolCapabilities extends AbstractCapabilities<Google> imp
                 .withNoSpaces()
                 .withLastCharacterSymbolAllowed(false)
                 .constrainedBy('-');
+    }
+
+    @Nonnull
+    @Override
+    public Requirement identifyResourcePoolLaunchRequirement() {
+        return Requirement.NONE;
+    }
+
+    @Nonnull
+    @Override
+    public Requirement identifyTemplateContentLaunchRequirement() {
+        return Requirement.NONE;
     }
 }
