@@ -190,8 +190,7 @@ public class DataCenters implements DataCenterServices {
             Compute gce = provider.getGoogleCompute();
             Compute.Regions.List gceRegions = null;
             try {
-                gceRegions = gce.regions().list(ctx.getAccountNumber());
-                RegionList regionList = gceRegions.execute();
+                RegionList regionList = gce.regions().list(ctx.getAccountNumber()).execute();
                 if ((null != regionList) && (null != regionList.getItems())) {
                     List<com.google.api.services.compute.model.Region> regionListItems = regionList.getItems();
                     for(int i=0;i<regionListItems.size();i++){
