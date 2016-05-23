@@ -47,9 +47,11 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(JUnit4.class)
 public class DatacentersTest extends GoogleTestBase{
+    private DataCenters dc = null;
     @Before
     public void setUp() throws CloudException, InternalException {
         super.setUp();
+        dc = new DataCenters(googleProviderMock);
     }
 
     private ZoneList getTestDataCenterList() {
@@ -95,7 +97,6 @@ public class DatacentersTest extends GoogleTestBase{
                 result = getTestDataCenterList();}
 
         };
-        DataCenters dc = new DataCenters(googleProviderMock);
         Collection<DataCenter> list = dc.listDataCenters(TEST_REGION);
         assertNotNull("Datacenter list can be empty but not null", list);
         assertTrue(list.size() == 2);
@@ -108,7 +109,6 @@ public class DatacentersTest extends GoogleTestBase{
                 result = getTestDataCenterList().getItems().get(0);}
 
         };
-        DataCenters dc = new DataCenters(googleProviderMock);
         DataCenter list = dc.getDataCenter(TEST_DATACENTER);
         assertNotNull(list);
         assertTrue(list.getName().equals(TEST_DATACENTER));
@@ -123,7 +123,6 @@ public class DatacentersTest extends GoogleTestBase{
                 result = getTestRegionList().getItems().get(0);}
 
         };
-        DataCenters dc = new DataCenters(googleProviderMock);
         org.dasein.cloud.dc.Region list = dc.getRegion(TEST_REGION);
         assertNotNull(list);
         assertTrue(list.getName().equals(TEST_REGION));
@@ -138,7 +137,6 @@ public class DatacentersTest extends GoogleTestBase{
                 result = getTestRegionList();
             }
         };
-        DataCenters dc = new DataCenters(googleProviderMock);
         Collection<org.dasein.cloud.dc.Region> list = dc.listRegions();
         assertNotNull("Region list can be empty but not null", list);
         assertTrue(list.size() == 2);
