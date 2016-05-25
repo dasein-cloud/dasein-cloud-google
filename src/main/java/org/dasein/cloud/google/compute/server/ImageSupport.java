@@ -197,8 +197,10 @@ public class ImageSupport extends AbstractImageSupport<Google> {
                 if(imgList.getItems() != null){
                     for(Image img : imgList.getItems()){
                         MachineImage image = toMachineImage(img);
-                        if(image != null && options.matches(image)) {
-                            images.add(image);
+                        if(image != null) {
+                            if (options == null || options.matches(image)) {
+                                images.add(image);
+                            }
                         }
                     }
                 }
@@ -507,7 +509,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
     @Override
     public MachineImage capture(@Nonnull ImageCreateOptions options, @Nullable AsynchronousTask<MachineImage> task) throws CloudException, InternalException {
         Compute gce = provider.getGoogleCompute();
-        ServerSupport server = new ServerSupport(provider);
+        ServerSupport server = provider.getComputeServices().getVirtualMachineSupport();
         Image imageContent = new Image();
 
         try {

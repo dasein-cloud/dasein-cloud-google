@@ -42,6 +42,7 @@ public class GoogleTestBase {
     @Mocked
     GoogleMethod googleMethodMock;
 
+    final String CLOUD_NAME = "GCE";
     final String TEST_ACCOUNT_NO = "12323232323";
     final String TEST_REGION = "us-central1";
     final String TEST_DATACENTER = "us-central1-a";
@@ -54,6 +55,7 @@ public class GoogleTestBase {
             {   providerContextMock.getAccountNumber(); result = TEST_ACCOUNT_NO; }
             {   providerContextMock.getRegionId(); result = TEST_REGION; }
             {   googleProviderMock.getGoogleCompute(); result = googleComputeMock; }
+            {   googleProviderMock.getCloudName(); result = CLOUD_NAME; }
         };
     }
 }
