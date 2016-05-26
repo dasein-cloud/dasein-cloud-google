@@ -103,7 +103,7 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
                                         ConvergedInfrastructureState.READY, System.currentTimeMillis(), dataCenterId, regionName, null);
                                 ci.setTag("selfLink", item.getSelfLink());
                                 ci.setTag("instanceGroupLink", item.getGroup());
-                                loadResources(ci, dataCenterId);
+                                loadResources(item, ci, dataCenterId);
                                 if (options != null) {
                                     if (options.matches(ci)) {
                                         convergedInfrastrutures.add(ci);
@@ -125,14 +125,12 @@ public class ReplicapoolSupport extends AbstractConvergedInfrastructureSupport <
         return convergedInfrastrutures;
     }
 
-    private void loadResources(ConvergedInfrastructure ci, String datacenterId) throws InternalException, CloudException {
+    private void loadResources(InstanceGroupManager pool, ConvergedInfrastructure ci, String datacenterId) throws InternalException, CloudException {
         APITrace.begin(getProvider(), "GoogleConvergedInfrastructure.loadResources");
         List<ConvergedInfrastructureResource> list = new ArrayList<>();
         try {
-            Replicapool rp = provider.getGoogleReplicapool();
             Compute gce = provider.getGoogleCompute();
 
-            InstanceGroupManager pool = rp.instanceGroupManagers().get(provider.getContext().getAccountNumber(), datacenterId, ci.getProviderCIId()).execute();
             String baseInstanceName = pool.getBaseInstanceName();
             InstanceList result = gce.instances().list(provider.getContext().getAccountNumber(), datacenterId).execute();
             for (Instance instance : result.getItems()) {

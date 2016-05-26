@@ -48,6 +48,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(JUnit4.class)
 public class DatacentersTest extends GoogleTestBase{
     private DataCenters dc = null;
+
     @Before
     public void setUp() throws CloudException, InternalException {
         super.setUp();
