@@ -118,7 +118,12 @@ public class DiskSupport extends AbstractVolumeSupport {
                     throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex);
                 }
             } catch (Exception ex) {
-			    throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex);
+			    if (ex instanceof ResourceNotFoundException) {
+                    throw ex;
+                }
+                else {
+                    throw new GeneralCloudException("An error occurred while attaching the disk: " + ex.getMessage(), ex);
+                }
 			}
         }
         finally{
@@ -193,7 +198,12 @@ public class DiskSupport extends AbstractVolumeSupport {
                     throw new GeneralCloudException("An error occurred while detaching the volume: " + ex.getMessage(), ex);
                 }
             } catch (Exception ex) {
-			    throw new GeneralCloudException("An error occurred while detaching the volume", ex);
+                if (ex instanceof InvalidStateException) {
+                    throw ex;
+                }
+                else {
+                    throw new GeneralCloudException("An error occurred while detaching the volume", ex);
+                }
 			}
         }
         finally{

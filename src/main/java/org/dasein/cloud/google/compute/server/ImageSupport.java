@@ -33,7 +33,6 @@ import org.dasein.cloud.CommunicationException;
 import org.dasein.cloud.GeneralCloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
-import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.Tag;
 import org.dasein.cloud.VisibleScope;
@@ -252,7 +251,7 @@ public class ImageSupport extends AbstractImageSupport<Google> {
         try{
             MachineImage image = getImage(providerImageId);
             if ((null == image) || (null == image.getCurrentState())) {
-                throw new ResourceNotFoundException("Image", providerImageId);
+                return;
             }
             if (image.getCurrentState().equals(MachineImageState.ACTIVE)) {
                 job = gce.images().delete(provider.getContext().getAccountNumber(), image.getName()).execute();

@@ -35,6 +35,7 @@ import org.apache.commons.collections.IteratorUtils;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.OperationNotSupportedException;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.VisibleScope;
 import org.dasein.cloud.compute.Architecture;
@@ -221,6 +222,16 @@ public class ServerSupportTest extends GoogleTestBase {
         assertTrue(name.equals("name"));
     }
 
+    @Test(expected = InternalException.class)
+    public void getVmNameFromId_shouldThrowExceptionIfIdIsNull() throws CloudException, InternalException {
+        support.getVmNameFromId(null);
+    }
+
+    @Test(expected = InternalException.class)
+    public void getVmNameFromId_shouldThrowExceptionIfIdStartsWith_() throws CloudException, InternalException {
+        support.getVmNameFromId("_BLAH");
+    }
+
     @Test
     public void getVmIdFromName() throws CloudException, InternalException {
         new NonStrictExpectations(ServerSupport.class) {
@@ -230,6 +241,21 @@ public class ServerSupportTest extends GoogleTestBase {
         };
         String id = support.getVmIdFromName("name");
         assertTrue(id.equals(TEST_VM_ID));
+    }
+
+    @Test(expected = InternalException.class)
+    public void getVmIdFromName_shouldThrowExceptionIfNameIsNull() throws CloudException, InternalException {
+        support.getVmIdFromName(null);
+    }
+
+    @Test(expected = ResourceNotFoundException.class)
+    public void getVmIdFromName_shouldThrowExceptionIfVmNotFound() throws CloudException, InternalException {
+        new NonStrictExpectations(ServerSupport.class) {
+            {support.getVirtualMachine(anyString);
+                result = null;
+            }
+        };
+        support.getVmIdFromName("name");
     }
 
     @Test
@@ -250,6 +276,15 @@ public class ServerSupportTest extends GoogleTestBase {
         assertTrue(consoleOutput.equals("content"));
     }
 
+    @Test(expected = ResourceNotFoundException.class)
+    public void getConsoleOutput_shouldThrowExceptionIfVmNotFound() throws CloudException, InternalException {
+        new NonStrictExpectations(ServerSupport.class) {
+            {support.listVirtualMachines();
+                result = Collections.emptyList();
+            }
+        };
+        support.getConsoleOutput(TEST_VM_ID);
+    }
 
     @Test
     public void getProduct_shouldReturnCorrectProduct() throws CloudException, InternalException, IOException {
@@ -445,6 +480,122 @@ public class ServerSupportTest extends GoogleTestBase {
         assertNotNull(vm);
     }
 
+    @Test(expected = ResourceNotFoundException.class)
+    public void launch_shouldThrowExceptionIfImageNotFound() throws CloudException, InternalException, IOException {
+        VMLaunchOptions options = VMLaunchOptions.getInstance(TEST_PRODUCT_ID, TEST_MACHINE_IMAGE_ID, TEST_HOST_NAME, TEST_FRIENDLY_NAME, TEST_DESCRIPTION);
+        options = options.inVlan(null, TEST_DATACENTER, TEST_VLAN_ID);
+
+        final VLAN network = new VLAN();
+        network.setTag("contentLink", "vlanContentLink");
+
+        final MachineImage image = MachineImage.getInstance("OWNER", TEST_REGION, TEST_MACHINE_IMAGE_ID, ImageClass.MACHINE, MachineImageState.ACTIVE,
+                "IMAGE_NAME", "IMAGE_DESCRIPTION", Architecture.I64, Platform.CENT_OS);
+
+        final Image gceImage = new Image();
+        gceImage.setLicenses(Collections.singletonList("LICENSE"));
+        gceImage.setDescription("DESCRIPTION");
+        gceImage.setName("GCE_IMAGE_NAME");
+        gceImage.setDiskSizeGb(10l);
+
+        new NonStrictExpectations(ServerSupport.class) {
+            {googleProviderMock.getNetworkServices().getVlanSupport().getVlan(TEST_VLAN_ID);
+                result = network;
+            }
+            {googleProviderMock.getComputeServices().getVolumeSupport().getVolume(anyString);
+                result = null;
+            }
+            {support.getProduct(anyString).getDescription();
+                result = TEST_PRODUCT_ID;
+            }
+            {googleProviderMock.getComputeServices().getImageSupport().getImage(TEST_MACHINE_IMAGE_ID);
+                result = image;
+            }
+            {googleComputeMock.images().get(anyString, anyString).execute();
+                result = gceImage;
+            }
+        };
+        support.launch(options);
+    }
+
+    @Test(expected = ResourceNotFoundException.class)
+    public void launch_shouldThrowExceptionIfImageContentLinkNotFound() throws CloudException, InternalException, IOException {
+        VMLaunchOptions options = VMLaunchOptions.getInstance(TEST_PRODUCT_ID, TEST_MACHINE_IMAGE_ID, TEST_HOST_NAME, TEST_FRIENDLY_NAME, TEST_DESCRIPTION);
+        options = options.inVlan(null, TEST_DATACENTER, TEST_VLAN_ID);
+
+        final VLAN network = new VLAN();
+        network.setTag("contentLink", "vlanContentLink");
+
+        final Image gceImage = new Image();
+        gceImage.setLicenses(Collections.singletonList("LICENSE"));
+        gceImage.setDescription("DESCRIPTION");
+        gceImage.setName("GCE_IMAGE_NAME");
+        gceImage.setDiskSizeGb(10l);
+
+        new NonStrictExpectations(ServerSupport.class) {
+            {googleProviderMock.getNetworkServices().getVlanSupport().getVlan(TEST_VLAN_ID);
+                result = network;
+            }
+            {googleProviderMock.getComputeServices().getVolumeSupport().getVolume(anyString);
+                result = null;
+            }
+            {support.getProduct(anyString).getDescription();
+                result = TEST_PRODUCT_ID;
+            }
+            {googleProviderMock.getComputeServices().getImageSupport().getImage(TEST_MACHINE_IMAGE_ID);
+                result = null;
+            }
+            {googleComputeMock.images().get(anyString, anyString).execute();
+                result = gceImage;
+            }
+        };
+        support.launch(options);
+    }
+
+    @Test(expected = ResourceNotFoundException.class)
+    public void launch_shouldThrowExceptionIfNewVmIdNotReturned() throws CloudException, InternalException, IOException {
+        VMLaunchOptions options = VMLaunchOptions.getInstance(TEST_PRODUCT_ID, TEST_MACHINE_IMAGE_ID, TEST_HOST_NAME, TEST_FRIENDLY_NAME, TEST_DESCRIPTION);
+        options = options.inVlan(null, TEST_DATACENTER, TEST_VLAN_ID);
+
+        final VLAN network = new VLAN();
+        network.setTag("contentLink", "vlanContentLink");
+
+        final MachineImage image = MachineImage.getInstance("OWNER", TEST_REGION, TEST_MACHINE_IMAGE_ID, ImageClass.MACHINE, MachineImageState.ACTIVE,
+                "IMAGE_NAME", "IMAGE_DESCRIPTION", Architecture.I64, Platform.CENT_OS);
+        image.setTag("contentLink", "imageContentLink");
+
+        final Image gceImage = new Image();
+        gceImage.setLicenses(Collections.singletonList("LICENSE"));
+        gceImage.setDescription("DESCRIPTION");
+        gceImage.setName("GCE_IMAGE_NAME");
+        gceImage.setDiskSizeGb(10l);
+
+        new NonStrictExpectations(ServerSupport.class) {
+            {googleProviderMock.getNetworkServices().getVlanSupport().getVlan(TEST_VLAN_ID);
+                result = network;
+            }
+            {googleProviderMock.getComputeServices().getVolumeSupport().getVolume(anyString);
+                result = null;
+            }
+            {support.getProduct(anyString).getDescription();
+                result = TEST_PRODUCT_ID;
+            }
+            {googleProviderMock.getComputeServices().getImageSupport().getImage(TEST_MACHINE_IMAGE_ID);
+                result = image;
+            }
+            {googleComputeMock.images().get(anyString, anyString).execute();
+                result = gceImage;
+            }
+            {googleComputeMock.instances().insert(TEST_ACCOUNT_NO, TEST_DATACENTER, (Instance)any).execute();
+                result = new Operation();
+            }
+            {googleMethodMock.getOperationTarget(providerContextMock, (Operation) any, GoogleOperationType.ZONE_OPERATION, "", TEST_DATACENTER, false);
+                result = "";
+            }
+        };
+
+        support.launch(options);
+    }
+
     @Test
     public void listProducts_shouldReturnProductsForSpecifiedDatacenter() throws CloudException, InternalException, IOException {
         new NonStrictExpectations() {
@@ -620,9 +771,24 @@ public class ServerSupportTest extends GoogleTestBase {
         support.terminate(TEST_VM_ID, "terminate test");
     }
 
+    @Test
+    public void terminateVm_shouldNotCallDeleteFunctionIfVmNotFound() throws CloudException, InternalException, IOException {
+        new NonStrictExpectations(ServerSupport.class) {
+            {support.getVirtualMachine(TEST_VM_ID);
+                result = null;
+            }
+        };
+        support.terminateVm(TEST_VM_ID);
+    }
+
     @Test(expected = OperationNotSupportedException.class)
     public void unpause_shouldThrowOperationNotSupportedException() throws CloudException, InternalException {
         support.unpause(TEST_VM_ID);
+    }
+
+    @Test(expected = InternalException.class)
+    public void launchMany_shouldThrowExceptionIfCountLessthanZero() throws CloudException, InternalException {
+        support.launchMany(VMLaunchOptions.getInstance(TEST_PRODUCT_ID, TEST_MACHINE_IMAGE_ID, "NAME", "DESCRIPTION"), 0);
     }
 }
 

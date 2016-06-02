@@ -177,7 +177,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
 
         if (vmId.contains("_")) {
             String[] parts = vmId.split("_");
-            if (null == parts[0]) {
+            if ("".equals(parts[0])) {
                 //todo
                 //should we have a new exception for errors caused by user/client provided data?
                 throw new InternalException("vmId cannot begin with '_'");
@@ -811,7 +811,7 @@ public class ServerSupport extends AbstractVMSupport<Google> {
             VirtualMachine vm = getVirtualMachine(vmId);
 
             if (null == vm) {
-                throw new ResourceNotFoundException("Virtual Machine", vmId);
+                return;
             }
 
             try {

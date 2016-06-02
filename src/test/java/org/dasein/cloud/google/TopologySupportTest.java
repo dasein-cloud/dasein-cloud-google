@@ -31,12 +31,16 @@ import org.dasein.cloud.ci.GoogleTopologySupport;
 import org.dasein.cloud.ci.Topology;
 import org.dasein.cloud.ci.TopologyFilterOptions;
 import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -44,6 +48,7 @@ import static org.junit.Assert.assertTrue;
  * Date: 26/05/2016
  * Time: 15:53
  */
+@RunWith(JUnit4.class)
 public class TopologySupportTest extends GoogleTestBase {
     private GoogleTopologySupport support = null;
     final String TEST_INSTANCE_TEMPLATE = "TEST_INSTANCE_TEMPLATE";
@@ -75,6 +80,7 @@ public class TopologySupportTest extends GoogleTestBase {
         return itl;
     }
 
+    @Test
     public void listTopologies_shouldReturnAllAvailableTopologies() throws CloudException, InternalException, IOException {
         new NonStrictExpectations() {
             {instanceTemplates.list(TEST_ACCOUNT_NO).execute();
@@ -88,9 +94,9 @@ public class TopologySupportTest extends GoogleTestBase {
         assertTrue(resultAsList.size() == 1);
         Topology topology = resultAsList.get(0);
         assertTrue(topology.getName().equals(TEST_INSTANCE_TEMPLATE));
-        assertTrue(topology.getProviderRegionId().equals(TEST_REGION));
+        assertNull(topology.getProviderRegionId());
         assertTrue(topology.getDescription().equals("DESCRIPTION"));
-        assertTrue(topology.getProviderDataCenterId().equals(TEST_DATACENTER));
-        assertTrue(topology.getProviderOwnerId(),equals(TEST_ACCOUNT_NO));
+        assertNull(topology.getProviderDataCenterId());
+        assertTrue(topology.getProviderOwnerId().equals(TEST_ACCOUNT_NO));
     }
 }

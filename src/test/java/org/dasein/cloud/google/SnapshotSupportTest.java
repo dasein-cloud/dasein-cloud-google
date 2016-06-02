@@ -39,6 +39,8 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ import static org.junit.Assert.*;
  * Date: 25/05/2016
  * Time: 14:23
  */
+@RunWith(JUnit4.class)
 public class SnapshotSupportTest extends GoogleTestBase {
     private SnapshotSupport support = null;
     final String TEST_SNAPSHOT_ID = "TESTSNAPSHOT_112233";

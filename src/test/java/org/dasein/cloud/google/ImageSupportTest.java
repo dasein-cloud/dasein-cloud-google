@@ -45,6 +45,8 @@ import org.dasein.cloud.google.compute.server.ImageSupport;
 import org.dasein.cloud.google.compute.server.ServerSupport;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,6 +60,7 @@ import static org.junit.Assert.assertTrue;
  * Date: 23/05/2016
  * Time: 14:24
  */
+@RunWith(JUnit4.class)
 public class ImageSupportTest extends GoogleTestBase {
     private ImageSupport support = null;
 
@@ -168,6 +171,11 @@ public class ImageSupportTest extends GoogleTestBase {
         assertTrue(img.getMinimumDiskSizeGb() == 2);
     }
 
+    @Test(expected = InternalException.class)
+    public void getImage_shouldThrowExceptionIfImageIdDoesNotContain_() throws CloudException, InternalException {
+        support.getImage("IMAGE");
+    }
+
     @Test
     public void listImageStatus_shouldReturnCorrectStatusOfEachImage() throws CloudException, InternalException, IOException {
         new NonStrictExpectations() {
@@ -274,6 +282,17 @@ public class ImageSupportTest extends GoogleTestBase {
             }
             {googleMethodMock.getOperationComplete(providerContextMock, (Operation) any, GoogleOperationType.GLOBAL_OPERATION, "", "");
                 result = true;
+            }
+        };
+
+        support.remove(TEST_IMAGE_ID);
+    }
+
+    @Test
+    public void remove_shouldJustReturnIfImageNotFound() throws CloudException, InternalException {
+        new NonStrictExpectations(ImageSupport.class) {
+            {support.getImage(anyString);
+                result = null;
             }
         };
 

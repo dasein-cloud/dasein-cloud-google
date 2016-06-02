@@ -30,6 +30,9 @@ import mockit.NonStrictExpectations;
 import org.apache.commons.collections.IteratorUtils;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
+import org.dasein.cloud.InvalidStateException;
+import org.dasein.cloud.OperationNotSupportedException;
+import org.dasein.cloud.ResourceNotFoundException;
 import org.dasein.cloud.ResourceStatus;
 import org.dasein.cloud.compute.VirtualMachine;
 import org.dasein.cloud.compute.Volume;
@@ -46,6 +49,8 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -62,6 +67,7 @@ import static org.junit.Assert.assertTrue;
  * Date: 19/05/2016
  * Time: 12:41
  */
+@RunWith(JUnit4.class)
 public class DiskSupportTest extends GoogleTestBase {
     private DiskSupport support  = null;
     final String TEST_VOLUME_ID = "TEST_VOLUME";
@@ -155,6 +161,20 @@ public class DiskSupportTest extends GoogleTestBase {
         support.attach(TEST_VOLUME_ID, TEST_VM_ID, "0");
     }
 
+    @Test(expected = ResourceNotFoundException.class)
+    public void attach_shouldThrowExceptionIfVmNotFound() throws CloudException, InternalException {
+        new NonStrictExpectations() {
+            {googleProviderMock.getComputeServices().getVirtualMachineSupport().getVmNameFromId(TEST_VM_ID);
+                result = "VMNAME";
+            }
+            {googleProviderMock.getComputeServices().getVirtualMachineSupport().getVirtualMachine(anyString);
+                result = null;
+            }
+        };
+
+        support.attach(TEST_VOLUME_ID, TEST_VM_ID, "0");
+    }
+
     @Test
     public void createVolume_shouldReturnNewVolumeId() throws CloudException, InternalException, IOException {
         new NonStrictExpectations() {
@@ -172,6 +192,15 @@ public class DiskSupportTest extends GoogleTestBase {
         String volumeId = support.createVolume(options);
         assertNotNull(volumeId);
         assertTrue(volumeId.equals(TEST_VOLUME_ID));
+    }
+
+    @Test(expected = OperationNotSupportedException.class)
+    public void createVolume_shouldThrowOperationNotSupportedExceptionIfVolumeFormatIsNFS() throws CloudException, InternalException {
+        VolumeCreateOptions options = VolumeCreateOptions.getInstance(new Storage<StorageUnit>(2, Storage.GIGABYTE), "myNewDisk", "myNewDiskDescription");
+        options.inDataCenter(TEST_DATACENTER);
+        options.setFormat(VolumeFormat.NFS);
+
+        support.createVolume(options);
     }
 
     @Test
@@ -198,6 +227,22 @@ public class DiskSupportTest extends GoogleTestBase {
         };
 
         support.detach(TEST_VOLUME_ID, false);
+    }
+
+    @Test(expected = InvalidStateException.class)
+    public void detach_shouldThrowExceptionIfVolumeIsNotAttached() throws CloudException, InternalException {
+        final Volume volume = new Volume();
+        volume.setTag("contentLink", "CONTENT_LINK");
+        volume.setProviderDataCenterId(TEST_DATACENTER);
+        volume.setDeviceId("1");
+
+        new NonStrictExpectations(DiskSupport.class) {
+            {support.getVolume(TEST_VOLUME_ID);
+                result = volume;
+            }
+        };
+
+        support.detach(TEST_VOLUME_ID, true);
     }
 
     @Test

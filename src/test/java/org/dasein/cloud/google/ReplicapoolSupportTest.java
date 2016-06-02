@@ -42,6 +42,8 @@ import org.dasein.cloud.dc.DataCenter;
 import org.dasein.cloud.dc.Region;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -56,6 +58,7 @@ import static org.junit.Assert.assertTrue;
  * Date: 26/05/2016
  * Time: 10:40
  */
+@RunWith(JUnit4.class)
 public class ReplicapoolSupportTest extends GoogleTestBase {
     private ReplicapoolSupport support = null;
 
