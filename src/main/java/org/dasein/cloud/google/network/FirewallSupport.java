@@ -79,7 +79,7 @@ public class FirewallSupport extends AbstractFirewallSupport<Google> {
 
     private Google provider = null;
 
-    FirewallSupport(Google provider) {
+    public FirewallSupport(Google provider) {
         super(provider);
         this.provider = provider;
     }
