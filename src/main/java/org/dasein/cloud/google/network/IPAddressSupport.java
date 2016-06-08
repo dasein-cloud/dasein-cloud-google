@@ -68,7 +68,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     static private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
     static private final Logger logger = Google.getLogger(IPAddressSupport.class);
 
-    protected IPAddressSupport(Google provider) {
+    public IPAddressSupport(Google provider) {
         super(provider);
     }
 
@@ -425,7 +425,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         ipAddress.setForVlan(false);
         if(address.getUsers() != null && address.getUsers().size() > 0){
             for(String user : address.getUsers()){
-                if (user.contains("instances")) {
+                if (user.contains("instances") && (ipAddress.getServerId() == null || ipAddress.getServerId().equals("")) ) {
                     user = user.substring(user.lastIndexOf("/") + 1);
                     //we need to get the full server name_id so that ids match up
                     user = getServerIdForName(user);
