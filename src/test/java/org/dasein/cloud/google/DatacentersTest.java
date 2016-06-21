@@ -79,7 +79,7 @@ public class DatacentersTest extends GoogleTestBase{
         List<Region> regionList = new ArrayList<Region>();
 
         Region region = new Region();
-        region.setName(TEST_REGION);;
+        region.setName(TEST_REGION);
         regionList.add(region);
 
         Region region1 = new Region();

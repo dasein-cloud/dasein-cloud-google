@@ -411,6 +411,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                 throw new GeneralCloudException("Exception adding listener", e);
             }
         } catch (Exception e) {
+            if (e instanceof ResourceNotFoundException) {
+                throw e;
+            }
             throw new GeneralCloudException("Exception adding listener", e); // catch the exception from method.getOperation
         }
     }
@@ -482,6 +485,9 @@ public class LoadBalancerSupport extends AbstractLoadBalancerSupport<Google>  {
                 throw new GeneralCloudException("Exception creating forwarding rule", e);
             }
         } catch (Exception e) {
+            if (e instanceof ResourceNotFoundException) {
+                throw e;
+            }
             throw new GeneralCloudException("Exception creating forwarding rule", e); // catch the exception from method.getOperation
         }
         finally {
