@@ -70,7 +70,7 @@ public class NetworkSupport extends AbstractVLANSupport {
 	static private final Logger logger = Google.getLogger(NetworkSupport.class);
 	private Google provider;
 
-	NetworkSupport(Google provider) {
+	public NetworkSupport(Google provider) {
         super(provider);
         this.provider = provider;
     }
@@ -298,7 +298,7 @@ public class NetworkSupport extends AbstractVLANSupport {
                 VLAN vlan = getVlan(vlanId);
 
                 // Check if vlan contains any FW rules, and if so, revoke them.
-                FirewallSupport fws = new FirewallSupport(provider);
+                FirewallSupport fws = provider.getNetworkServices().getFirewallSupport();
                 Collection<FirewallRule> rules = fws.getRules("fw-" + vlanId);
                 for (FirewallRule rule : rules) {
                     fws.revoke(rule.getProviderRuleId());

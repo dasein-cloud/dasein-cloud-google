@@ -22,6 +22,7 @@ package org.dasein.cloud.google;
 import com.google.api.services.compute.Compute;
 import mockit.Mocked;
 import mockit.NonStrictExpectations;
+import org.apache.log4j.Logger;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.ProviderContext;
@@ -41,6 +42,8 @@ public class GoogleTestBase {
     Compute googleComputeMock;
     @Mocked
     GoogleMethod googleMethodMock;
+    @Mocked
+    Logger logger;
 
     final String CLOUD_NAME = "GCE";
     final String TEST_ACCOUNT_NO = "12323232323";
@@ -56,6 +59,7 @@ public class GoogleTestBase {
             {   providerContextMock.getRegionId(); result = TEST_REGION; }
             {   googleProviderMock.getGoogleCompute(); result = googleComputeMock; }
             {   googleProviderMock.getCloudName(); result = CLOUD_NAME; }
+            {   googleProviderMock.getLogger((Class) any); result = logger; }
         };
     }
 }
