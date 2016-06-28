@@ -1,10 +1,12 @@
 package org.dasein.cloud.ci;
 
-import javax.annotation.Nonnull;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.InternalException;
 import org.dasein.cloud.google.Google;
 import org.dasein.cloud.util.NamingConstraints;
+
+import javax.annotation.Nonnull;
+import java.util.Locale;
 
 public class GCETopologyCapabilities implements TopologyCapabilities {
 
@@ -20,6 +22,11 @@ public class GCETopologyCapabilities implements TopologyCapabilities {
                 .withNoSpaces()
                 .withLastCharacterSymbolAllowed(false)
                 .constrainedBy('-');
+    }
+
+    @Override
+    public String getProviderTermForTopology(Locale locale) {
+        return "Instance Template";
     }
 
 }

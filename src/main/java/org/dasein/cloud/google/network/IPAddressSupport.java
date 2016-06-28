@@ -68,7 +68,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     static private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
     static private final Logger logger = Google.getLogger(IPAddressSupport.class);
 
-    protected IPAddressSupport(Google provider) {
+    public IPAddressSupport(Google provider) {
         super(provider);
     }
 
@@ -98,7 +98,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
                 Operation job = gce.instances().addAccessConfig(getContext().getAccountNumber(), vm.getProviderDataCenterId(), serverId, "nic0", accessConfig).execute();
 
                 if(!method.getOperationComplete(getContext(), job, GoogleOperationType.ZONE_OPERATION, "", vm.getProviderDataCenterId())){
-                    throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": Operation timed out", CloudErrorType.OPERATION_TIMED_OUT);
+                    throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": Operation timed out");
                 }
     	    } catch (Exception ex) {
 	            logger.error(ex.getMessage());
@@ -106,7 +106,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred assigning the IP: " + addressId + ": " + ex.getMessage(), ex);
                 }
             }
         }
@@ -163,7 +163,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred getting the IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred getting the IPAddress: " + ex.getMessage(), ex);
                 }
             }
             return null;
@@ -192,7 +192,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
 				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
 				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
 			} else {
-                throw new GeneralCloudException("An error occurred finding the specified IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("An error occurred finding the specified IPAddress: " + ex.getMessage(), ex);
             }
         }
     }
@@ -236,7 +236,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex);
                 }
             }
         }
@@ -280,7 +280,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred listing IPs: " + ex.getMessage(), ex);
                 }
             }
         }
@@ -300,7 +300,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
 
                 GoogleMethod method = new GoogleMethod(getProvider());
                 if(!method.getOperationComplete(getContext(), job, GoogleOperationType.REGION_OPERATION, ipAddress.getRegionId(), "")){
-                    throw new GeneralCloudException("An error occurred releasing address: " + addressId + ": Operation timed out", CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred releasing address: " + addressId + ": Operation timed out");
                 }
     	    } catch (IOException ex) {
 	            logger.error(ex.getMessage());
@@ -308,7 +308,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred releasing address: " + addressId + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred releasing address: " + addressId + ": " + ex.getMessage(), ex);
                 }
             }
         }
@@ -344,7 +344,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
 
                 GoogleMethod method = new GoogleMethod(getProvider());
                 if(!method.getOperationComplete(getContext(), job, GoogleOperationType.ZONE_OPERATION, "", zone)){
-                    throw new GeneralCloudException("An error occurred releasing the address from the server: Operation timed out", CloudErrorType.OPERATION_TIMED_OUT);
+                    throw new GeneralCloudException("An error occurred releasing the address from the server: Operation timed out");
                 }
     	    } catch (IOException ex) {
 	            logger.error(ex.getMessage());
@@ -352,7 +352,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred releasing the address from the server: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred releasing the address from the server: " + ex.getMessage(), ex);
                 }
             } catch (Exception ex) {
     		    logger.error(ex.getMessage());
@@ -384,7 +384,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
         				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
         			} else {
-                        throw new GeneralCloudException("An error occurred requesting an IPAddress: " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                        throw new GeneralCloudException("An error occurred requesting an IPAddress: " + ex.getMessage(), ex);
                     }
                 }
             }
@@ -425,7 +425,7 @@ public class IPAddressSupport extends AbstractIpAddressSupport<Google> {
         ipAddress.setForVlan(false);
         if(address.getUsers() != null && address.getUsers().size() > 0){
             for(String user : address.getUsers()){
-                if (user.contains("instances")) {
+                if (user.contains("instances") && (ipAddress.getServerId() == null || ipAddress.getServerId().equals("")) ) {
                     user = user.substring(user.lastIndexOf("/") + 1);
                     //we need to get the full server name_id so that ids match up
                     user = getServerIdForName(user);

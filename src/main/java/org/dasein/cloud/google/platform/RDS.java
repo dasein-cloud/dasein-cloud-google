@@ -129,7 +129,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
             throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
         } else {
-            throw new GeneralCloudException(message, e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException(message, e);
         }
     }
 
@@ -416,7 +416,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 response = sqlAdmin.instances().insert(ctx.getAccountNumber(), content).execute();
             } catch (GoogleJsonResponseException ge) {
                 if ((ge.getStatusMessage().equals("Conflict")) && (ge.getStatusCode() == 409)) {
-                    throw new GeneralCloudException("The name " + dataSourceName + " has been used in the past 2 months. Once used, DB names are reserved for 2 months after their decomission.", ge, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("The name " + dataSourceName + " has been used in the past 2 months. Once used, DB names are reserved for 2 months after their decomission.", ge);
                 } else {
                     throw new Exception(ge);
                 }
@@ -425,7 +425,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 method.getRDSOperationCompleteLong(ctx, response.getName());
             } catch (NullPointerException npe) {
                 logger.error("getRDSOperationCompleteLong failed: " + npe);
-                throw new GeneralCloudException("getRDSOperationCompleteLong failed: " + npe, npe, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("getRDSOperationCompleteLong failed: " + npe, npe);
             }
 
             try {
@@ -883,7 +883,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                     for (DatabaseInstance d : databaseInstances) {
                         Settings s = d.getSettings();
                         if (null == s) {
-                            throw new GeneralCloudException("getSettings() returned null!", CloudErrorType.GENERAL);
+                            throw new GeneralCloudException("getSettings() returned null!");
                         }
                         BackupConfiguration backupConfig = s.getBackupConfiguration();
 
@@ -1000,15 +1000,15 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
             if (e.getClass() == GoogleJsonResponseException.class) {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 if ((gjre.getStatusMessage().equals("Conflict")) && (gjre.getStatusCode() == 409)) {
-                    throw new GeneralCloudException("Database already deleted.", e, CloudErrorType.INVALID_STATE);
+                    throw new GeneralCloudException("Database already deleted.", e);
                 } else {
                     throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
                 }
             } else {
-                throw new GeneralCloudException("Exception deleting database", e, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("Exception deleting database", e);
             }
         } catch (Exception e) {
-            throw new GeneralCloudException("Exception deleting database", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception deleting database", e);
         }
 
         Collection<Database> list = (Collection<Database>)listDatabasesCache.get(ctx);
@@ -1043,10 +1043,10 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
                 GoogleJsonResponseException gjre = (GoogleJsonResponseException)e;
                 throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
             } else {
-                throw new GeneralCloudException("Exception restarting database", e, CloudErrorType.GENERAL);
+                throw new GeneralCloudException("Exception restarting database", e);
             }
         } catch (Exception e) {
-            throw new GeneralCloudException("Exception restarting database", e, CloudErrorType.GENERAL);
+            throw new GeneralCloudException("Exception restarting database", e);
         }
     }
 
@@ -1106,7 +1106,7 @@ public class RDS extends AbstractRelationalDatabaseSupport<Google> {
         if (bestCandidateBackup != null) {
             return bestCandidateBackup;
         } else {
-            throw new GeneralCloudException("No available backups meet requirements.", CloudErrorType.GENERAL);
+            throw new GeneralCloudException("No available backups meet requirements.");
         }
     }
 

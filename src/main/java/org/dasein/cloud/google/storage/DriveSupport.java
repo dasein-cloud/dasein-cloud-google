@@ -100,7 +100,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
                 }
                 catch( IOException e ) {
                     logger.error("Could not fetch file to " + toFile + ": " + e.getMessage());
-                    throw new GeneralCloudException("Could not fetch file to \" + toFile + \": \" + e.getMessage()", e, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Could not fetch file to \" + toFile + \": \" + e.getMessage()", e);
                 }
     		} catch (IOException ex) {
 				logger.error(ex.getMessage());
@@ -108,7 +108,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception downloading", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception downloading", ex);
                 }
             }
         }
@@ -158,7 +158,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception uploading", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception uploading", ex);
                 }
             }
         }
@@ -221,7 +221,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception creating bucket", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception creating bucket", ex);
                 }
             }
         }
@@ -273,7 +273,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				}
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred when getting bucket: " + bucketName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred when getting bucket: " + bucketName + ": " + ex.getMessage(), ex);
                 }
             }
         }
@@ -305,7 +305,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("An error occurred when getting object: " + objectName + ": " + ex.getMessage(), ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred when getting object: " + objectName + ": " + ex.getMessage(), ex);
                 }
             }
         }
@@ -374,7 +374,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception checking object shared publicly", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception checking object shared publicly", ex);
                 }
             }
         }
@@ -423,7 +423,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception listing buckets", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception listing buckets", ex);
                 }
             }
         }
@@ -449,7 +449,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception making bucket public", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception making bucket public", ex);
                 }
             }
         }
@@ -475,7 +475,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception making object public", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception making object public", ex);
                 }
             }
         }
@@ -522,7 +522,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception removing bucket", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception removing bucket", ex);
                 }
             }
         }
@@ -548,7 +548,7 @@ public class DriveSupport extends AbstractBlobStoreSupport<Google> {
     				GoogleJsonResponseException gjre = (GoogleJsonResponseException)ex;
     				throw new GoogleException(CloudErrorType.GENERAL, gjre.getStatusCode(), gjre.getContent(), gjre.getDetails().getMessage());
     			} else {
-                    throw new GeneralCloudException("Exception removing object", ex, CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("Exception removing object", ex);
                 }
             }
         }

@@ -26,7 +26,6 @@ import com.google.api.services.replicapool.model.Operation.Error.Errors;
 import com.google.api.services.sqladmin.SQLAdmin;
 import com.google.api.services.sqladmin.model.OperationError;
 import org.apache.log4j.Logger;
-import org.dasein.cloud.CloudErrorType;
 import org.dasein.cloud.CloudException;
 import org.dasein.cloud.CommunicationException;
 import org.dasein.cloud.GeneralCloudException;
@@ -59,7 +58,7 @@ public class GoogleMethod {
         while(timeout > System.currentTimeMillis()) {
             if(job.getError() != null){
                 for(Operation.Error.Errors error : job.getError().getErrors()){
-                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage());
                 }
             }
             else if(job.getStatus().equals("DONE")){
@@ -105,7 +104,7 @@ public class GoogleMethod {
         while(timeout > System.currentTimeMillis()) {
             if(job.getError() != null){
                 for(Operation.Error.Errors error : job.getError().getErrors()){
-                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage());
                 }
             }
             else if(job.getStatus().equals("DONE")){
@@ -158,7 +157,7 @@ public class GoogleMethod {
 
             if (instanceOperation.getError() != null) {
                 for (OperationError error : instanceOperation.getError().getErrors()) {
-                    throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind(), CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind());
                 }
             } else if (instanceOperation.getStatus().equals("DONE")) {
                 return;
@@ -190,7 +189,7 @@ public class GoogleMethod {
             if (null != instanceOperation) {
                 if (null != instanceOperation.getError()) {
                     for (OperationError error : instanceOperation.getError().getErrors()) {
-                        throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind(), CloudErrorType.GENERAL);
+                        throw new GeneralCloudException("An error occurred: " + error.getCode() + " : " + error.getKind());
                     }
                 } else if (instanceOperation.getStatus().equals("DONE")) {
                     return;
@@ -216,13 +215,13 @@ public class GoogleMethod {
         while (timeout > System.currentTimeMillis()) {
             try {
                 job = rp.zoneOperations().get(ctx.getAccountNumber(), dataCenterId, job.getName()).execute();
-            } catch(IOException ex) { 
+            } catch(IOException ex) {
                 System.out.println(ex);
             }
 
             if (job.getError() != null) {
                 for (Errors error : job.getError().getErrors()) {
-                    throw new GeneralCloudException("An error occurred: " + error.getMessage(), CloudErrorType.GENERAL);
+                    throw new GeneralCloudException("An error occurred: " + error.getMessage());
                 }
             }
             else if (job.getStatus().equals("DONE")) {
