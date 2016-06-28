@@ -57,7 +57,7 @@ public class NetworkSupportTest extends GoogleTestBase {
     private NetworkSupport support = null;
 
     static final String TEST_ROUTING_TABLE_ID = "TEST_ROUTING_TABLE_ID";
-    static final String TEST_DESTINATIN_CIDR = "TEST_DESTINATION_CIDR";
+    static final String TEST_DESTINATION_CIDR = "TEST_DESTINATION_CIDR";
     static final String TEST_ADDRESS = "TEST_ADDRESS";
     static final String TEST_GATEWAY = "TEST_GATEWAY";
     static final String TEST_NIC_ID = "TEST_NIC_ID";
@@ -76,7 +76,7 @@ public class NetworkSupportTest extends GoogleTestBase {
         Route route = new Route();
         route.setName("TEST_ROUTE");
         route.setNetwork(TEST_VLAN_ID);
-        route.setDestRange(TEST_DESTINATIN_CIDR);
+        route.setDestRange(TEST_DESTINATION_CIDR);
         route.setNextHopInstance(TEST_VM_ID);
 
         RouteList list = new RouteList();
@@ -88,7 +88,7 @@ public class NetworkSupportTest extends GoogleTestBase {
         Network network = new Network();
         network.setName(TEST_VLAN_ID);
         network.setSelfLink("/networks/"+TEST_VLAN_ID);
-        network.setIPv4Range(TEST_DESTINATIN_CIDR);
+        network.setIPv4Range(TEST_DESTINATION_CIDR);
         network.setDescription("TEST_DESCRIPTION");
 
         NetworkList list = new NetworkList();
@@ -98,17 +98,17 @@ public class NetworkSupportTest extends GoogleTestBase {
 
     @Test(expected = OperationNotSupportedException.class)
     public void addRouteToAddress_shouldThrowNotSupportedException() throws CloudException, InternalException {
-        support.addRouteToAddress(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATIN_CIDR, TEST_ADDRESS);
+        support.addRouteToAddress(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATION_CIDR, TEST_ADDRESS);
     }
 
     @Test(expected = OperationNotSupportedException.class)
     public void addRouteToGateway_shouldThrowNotSupportedException() throws CloudException, InternalException {
-        support.addRouteToGateway(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATIN_CIDR, TEST_GATEWAY);
+        support.addRouteToGateway(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATION_CIDR, TEST_GATEWAY);
     }
 
     @Test(expected = OperationNotSupportedException.class)
     public void addRouteToNetworkInterface_shouldThrowNotSupportedException() throws CloudException, InternalException {
-        support.addRouteToNetworkInterface(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATIN_CIDR, TEST_NIC_ID);
+        support.addRouteToNetworkInterface(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATION_CIDR, TEST_NIC_ID);
     }
 
     @Test
@@ -132,9 +132,9 @@ public class NetworkSupportTest extends GoogleTestBase {
             }
         };
 
-        org.dasein.cloud.network.Route route = support.addRouteToVirtualMachine(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATIN_CIDR, TEST_VM_ID);
+        org.dasein.cloud.network.Route route = support.addRouteToVirtualMachine(TEST_ROUTING_TABLE_ID, IPVersion.IPV4, TEST_DESTINATION_CIDR, TEST_VM_ID);
         assertTrue(route.getGatewayVirtualMachineId().equals(TEST_VM_ID));
-        assertTrue(route.getDestinationCidr().equals(TEST_DESTINATIN_CIDR));
+        assertTrue(route.getDestinationCidr().equals(TEST_DESTINATION_CIDR));
         assertTrue(route.getGatewayOwnerId().equals(TEST_ACCOUNT_NO));
     }
 
@@ -145,7 +145,7 @@ public class NetworkSupportTest extends GoogleTestBase {
                 result = false;
             }
         };
-        support.createVlan(TEST_DESTINATIN_CIDR, "TEST_VLAN_NAME", "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
+        support.createVlan(TEST_DESTINATION_CIDR, "TEST_VLAN_NAME", "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
     }
 
     @Test(expected = InternalException.class)
@@ -155,7 +155,7 @@ public class NetworkSupportTest extends GoogleTestBase {
                 result = null;
             }
         };
-        support.createVlan(TEST_DESTINATIN_CIDR, "TEST_VLAN_NAME", "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
+        support.createVlan(TEST_DESTINATION_CIDR, "TEST_VLAN_NAME", "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
     }
 
     @Test
@@ -171,7 +171,7 @@ public class NetworkSupportTest extends GoogleTestBase {
                 result = getTestNetworkList().getItems().get(0);
             }
         };
-        VLAN vlan = support.createVlan(TEST_DESTINATIN_CIDR, TEST_VLAN_ID, "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
+        VLAN vlan = support.createVlan(TEST_DESTINATION_CIDR, TEST_VLAN_ID, "TEST_DESCRIPTION", "TEST_DOMAIN", new String[]{"192.168.1.1"}, new String[]{"192.168.1.1"});
         assertTrue(vlan.getProviderVlanId().equals(TEST_VLAN_ID));
     }
 
@@ -193,7 +193,7 @@ public class NetworkSupportTest extends GoogleTestBase {
         assertTrue(vlan.getProviderVlanId().equals(TEST_VLAN_ID));
         assertTrue(vlan.getProviderOwnerId().equals(TEST_ACCOUNT_NO));
         assertTrue(vlan.getTag("contentLink").toString().equals("/networks/"+TEST_VLAN_ID));
-        assertTrue(vlan.getCidr().equals(TEST_DESTINATIN_CIDR));
+        assertTrue(vlan.getCidr().equals(TEST_DESTINATION_CIDR));
         assertTrue(vlan.getDescription().equals("TEST_DESCRIPTION"));
         assertTrue(vlan.getVisibleScope().equals(VisibleScope.ACCOUNT_GLOBAL));
         assertTrue(vlan.getCurrentState().equals(VLANState.AVAILABLE));

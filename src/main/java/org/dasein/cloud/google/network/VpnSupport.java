@@ -49,7 +49,7 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
     private Google provider;
     private VpnCapabilities capabilities;
 
-    protected VpnSupport(Google provider) {
+    public VpnSupport(Google provider) {
         super(provider);
         this.provider = provider;
     }
@@ -70,8 +70,6 @@ public class VpnSupport extends AbstractVpnSupport<Google> {
         APITrace.begin(provider, "createVpn");
         Vpn vpn = new Vpn();
         try {
-            vpn.setName(vpnLaunchOptions.getName());
-            vpn.setDescription(vpnLaunchOptions.getDescription());
             Compute gce = getProvider().getGoogleCompute();
             try {
                 GoogleMethod method = new GoogleMethod(getProvider());
